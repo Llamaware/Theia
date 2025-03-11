@@ -401,4 +401,31 @@ public final class SharedFunctionInfoStruct implements IAllocatable {
 	public DataType toDataType() throws DuplicateNameException, IOException {
 		return s;
 	}
+	
+	@Override
+	public String toString() {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("SharedFunctionInfoStruct {");
+	    sb.append("\n  functionLiteralId: ").append(functionLiteralId);
+	    sb.append("\n  name: ").append(name != null ? name : "null");
+	    sb.append("\n  codeOffset: ").append(codeOffset != null ? codeOffset : "null");
+	    sb.append("\n  scopeInfo1s: ").append(scopeInfo1s != null ? scopeInfo1s.toString() : "null");
+	    sb.append("\n  scopeInfo2s: ").append(scopeInfo2s != null ? scopeInfo2s.toString() : "null");
+	    sb.append("\n  constructStub: ").append(constructStub != null ? constructStub : "null");
+	    sb.append("\n  instanceClass: ").append(instanceClass != null ? instanceClass.toString() : "null");
+	    sb.append("\n  debugInfo: ").append(debugInfo);
+	    sb.append("\n  ident: ").append(ident != null ? ident.toString() : "null");
+	    sb.append("\n  functionLength: ").append(functionLength);
+	    sb.append("\n  formalParameterCount: ").append(formalParameterCount);
+	    sb.append("\n  expectedNofProperties: ").append(expectedNofProperties);
+	    sb.append("\n  startPositionAndType: ").append(startPositionAndType);
+	    sb.append("\n  endPosition: ").append(endPosition);
+	    sb.append("\n  functionTokenPosition: ").append(functionTokenPosition);
+	    sb.append("\n  compilerHints: ").append(compilerHints);
+	    sb.append("\n  size: ").append(size);
+	    sb.append("\n  bytecode: ").append(bytecode.toString());
+	    sb.append("\n}");
+	    return sb.toString();
+	}
+
 }

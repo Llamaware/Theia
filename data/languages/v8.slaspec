@@ -604,6 +604,10 @@ cache_length: kReg is kReg {export kReg;}
 :CreateEmptyObjectLiteral is op = 0x6f {
 	acc = CreateEmptyObjectLiteral(_context);
 }
+:GetTemplateObject [kIdx] is op = 0x70; kIdx {
+    cp:4 = cpool(0, inst_start, kIdx, $(CP_CONSTANTS));
+    acc = GetTemplateObject(_context, cp);
+}
 :CreateClosure [kIdx], [kIdx_2], kFlag8 is op = 0x71; kIdx; kIdx_2; kFlag8 {
 	cp:4 = cpool(0,inst_start, kIdx, $(CP_CONSTANTS));
 	acc = CreateClosure(_context, cp, kIdx_2:4, kFlag8:4);

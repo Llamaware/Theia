@@ -58,6 +58,7 @@ import v8_bytecode.structs.HandlerTableItemStruct;
 import v8_bytecode.structs.HandlerTableStruct;
 import v8_bytecode.structs.SharedFunctionInfoStruct;
 import v8_bytecode.MessageLog2;
+import java.util.Random;
 
 public final class NwjcParser {
 	private List<Object> attached = new ArrayList<>();
@@ -127,12 +128,32 @@ public final class NwjcParser {
 		allocator = new ObjectsAllocator(enums, enumsDt, program, monitor);
 	}
 	
+	public String getRandomParsingMessage() {
+	    String[] messages = {
+	        "Reticulating splines...",
+	        "Constructing additional pylons...",
+	        "It’s dangerous to go alone! Take this.",
+	        "All your base are belong to us.",
+	        "Finish him!",
+	        "Do a barrel roll!",
+	        "Hey! Listen!",
+	        "It's high noon...",
+	        "All according to keikaku.",
+	        "Deploying surprise in 5... 4..."
+	    };
+
+	    Random random = new Random();
+	    return messages[random.nextInt(messages.length)];
+	}
+	
 	private long pointerSizeAlign(long value) {
 		return ((value + kPointerAlignmentMask) & ~kPointerAlignmentMask);
 	}
 	
 	public void parse() throws Exception {
-		monitor.setMessage("Parsing the binary...");
+		//monitor.setMessage("Parsing the binary...");
+		
+		monitor.setMessage(getRandomParsingMessage());
 		
 		reader.readNextUnsignedInt(); // skip magic dword
 
@@ -318,6 +339,7 @@ public final class NwjcParser {
 			if (sf == null) {
 				sf = new SharedFunctionInfoStruct(func, allocator);
 				//Address sfiAddr = sf.allocate(allocator, monitor);
+				log.appendMsg("sf is null, allocated: " + sf.toString());
 				sf.allocate(allocator, monitor);
 				mgr.addDataType(sf.toDataType(), DataTypeConflictHandler.DEFAULT_HANDLER);
 			}

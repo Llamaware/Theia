@@ -230,4 +230,27 @@ public final class BytecodeStruct implements IAllocatable {
 	public DataType toDataType() throws DuplicateNameException, IOException {
 		return s;
 	}
+	
+	@Override
+	public String toString() {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("BytecodeStruct {");
+	    sb.append("\n  funcIndex: ").append(funcIndex);
+	    sb.append("\n  length: ").append(length);
+	    sb.append("\n  frameSize: ").append(frameSize);
+	    sb.append("\n  parameterSize: ").append(parameterSize);
+	    sb.append("\n  incoming: ").append(incoming);
+	    sb.append("\n  interruptBudget: ").append(interruptBudget);
+	    sb.append("\n  osrNestingLevel: ").append(osrNestingLevel);
+	    sb.append("\n  bytecodeAge: ").append(bytecodeAge);
+	    sb.append("\n  baseAddr: ").append(baseAddr != null ? baseAddr.toString() : "null");
+	    sb.append("\n  cp: ").append(cp != null ? cp.toString() : "null");
+	    sb.append("\n  ht: ").append(ht != null ? ht.toString() : "null");
+	    sb.append("\n  spt: ").append(spt != null ? spt.toString() : "null");
+	    sb.append("\n  size: ").append(size);
+	    sb.append("\n  kConstantPoolOffset: ").append(kConstantPoolOffset);
+	    sb.append("\n}");
+	    return sb.toString();
+	}
+
 }

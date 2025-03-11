@@ -118,4 +118,43 @@ public final class ConstantPoolStruct implements IAllocatable {
 	public int getFunctionIndex() {
 		return funcIndex;
 	}
+	
+	@Override
+	public String toString() {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("ConstantPoolStruct {");
+	    sb.append("\n  funcIndex: ").append(funcIndex);
+	    sb.append("\n  count: ").append(count);
+	    sb.append("\n  size: ").append(size);
+	    sb.append("\n  items:");
+	    for (int i = 0; i < items.size(); i++) {
+	        Pair<Object, Address> item = items.get(i);
+	        sb.append("\n    [").append(i).append("]: ");
+	        sb.append("Value: ").append(getSummary(item.first));
+	        sb.append(", Address: ").append(item.second != null ? item.second.toString() : "null");
+	    }
+	    sb.append("\n}");
+	    return sb.toString();
+	}
+
+	private String getSummary(Object obj) {
+	    if (obj == null) return "null";
+	    // Instead of recursing, print a summary depending on the type
+	    if (obj instanceof ConstantPoolStruct) {
+	        ConstantPoolStruct cps = (ConstantPoolStruct) obj;
+	        return "ConstantPoolStruct (funcIndex: " + cps.getFunctionIndex() + ")";
+	    } else if (obj instanceof BytecodeStruct) {
+	        BytecodeStruct bs = (BytecodeStruct) obj;
+	        return "BytecodeStruct (length: " + bs.getLength() + ")";
+	    } else if (obj instanceof SharedFunctionInfoStruct) {
+	        SharedFunctionInfoStruct sfis = (SharedFunctionInfoStruct) obj;
+	        return "SharedFunctionInfoStruct (name: " + sfis.getName() + ")";
+	    } else {
+	        // Fallback: print class name and hash code
+	        return obj.getClass().getSimpleName() + "@" + Integer.toHexString(obj.hashCode());
+	    }
+	}
+
+
+
 }

@@ -358,11 +358,19 @@ public final class ObjectsAllocator {
 			byte[] result = reservObjectToBytes(obj, 2, false);
 			return new String(result);
 		}
+		case "OneByteStringMap": { // New case
+			byte[] result = reservObjectToBytes(obj, 2, false);
+			return new String(result);
+		}
 		case "OneByteInternalizedStringMap": { // New case
 			byte[] result = reservObjectToBytes(obj, 2, false);
 			return new String(result, StandardCharsets.ISO_8859_1); // Use single-byte encoding
 		}
 		case "InternalizedString": {
+			byte[] result = reservObjectToBytes(obj, 2, true);
+			return new String(result, StandardCharsets.UTF_16LE);
+		}
+		case "InternalizedStringMap": { // New case
 			byte[] result = reservObjectToBytes(obj, 2, true);
 			return new String(result, StandardCharsets.UTF_16LE);
 		}
@@ -396,7 +404,7 @@ public final class ObjectsAllocator {
 			return convertConsOneByteString(obj);
 		}
 		default: {
-			throw new Exception(type);
+			throw new Exception(type + " not implemented in ConvertReservObject");
 		}
 		}
 	}
@@ -448,9 +456,9 @@ public final class ObjectsAllocator {
 			
 			int kPointerSize = getPointerSize();
 			
-			if (type.equals("OneByteInternalizedString") || type.equals("OneByteString")) {
+			if (type.equals("OneByteInternalizedString") || type.equals("OneByteString") || type.equals("OneByteStringMap")) {
 				return (String) convertReservObject((ReservObject)obj);
-			} else if (type.equals("ConsOneByteString")) {
+			} else if (type.equals("ConsOneByteString") || type.equals("ConsOneByteStringMap")) {
 				final ReservObject rObj = (ReservObject)obj;
 				String left = convertConsOneByteString(rObj.getAlignedObject(3 * kPointerSize)); // meta, hash, size
 				return left + convertConsOneByteString(rObj.getAlignedObject(4 * kPointerSize));
@@ -474,6 +482,8 @@ public final class ObjectsAllocator {
 			case "OneByteInternalizedStringMap": // New case
 			case "OneByteString":
 			case "InternalizedString":
+				return convertReservObject(rObj);
+			case "InternalizedStringMap":
 				return convertReservObject(rObj);
 			case "SharedFunctionInfo": {
 				SharedFunctionInfoStruct sf = SharedFunctionInfoStruct.getSharedFunctionInfo(this, SharedFunctionInfoStruct.getFunctionIndex(rObj, kPointerSize));
@@ -516,6 +526,9 @@ public final class ObjectsAllocator {
 			case "FixedCOWArray": {
 				return new ArrayStruct(rObj, this);
 			}
+			case "FixedCOWArrayMap": {
+				return new ArrayStruct(rObj, this);
+			}
 			case "Tuple2": {
 				return new TupleStruct(rObj, 2, this);
 			}
@@ -523,6 +536,9 @@ public final class ObjectsAllocator {
 				return new TupleStruct(rObj, 3, this);
 			}
 			case "HeapNumber": {
+				return twoIntsToDouble(rObj.getInt(kPointerSize), rObj.getInt(kPointerSize + 4));
+			}
+			case "HeapNumberMap": { // New case
 				return twoIntsToDouble(rObj.getInt(kPointerSize), rObj.getInt(kPointerSize + 4));
 			}
 			default: {
