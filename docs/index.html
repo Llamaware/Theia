@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Theia - Nwjc Decompiler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #222;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            font-size: 2em;
+        }
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+        }
+        blockquote {
+            font-style: italic;
+            background-color: #f9f9f9;
+            border-left: 4px solid #ccc;
+            margin: 20px 0;
+            padding: 10px 20px;
+            color: #555;
+        }
+        img {
+            max-width: 1000px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        pre, code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            overflow-x: auto;
+            display: block;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <header>Theia - Nwjc Decompiler</header>
+
+    <div class="container">
+        <h2>Overview</h2>
+        <blockquote>"I'm an intellectual rapist who enjoys exposing things people try to hide. Got it?" — Furudo Erika</blockquote>
+        <p><a href="https://github.com/Llamaware/Theia">Theia</a> is a Ghidra extension that allows you to parse, disassemble, and decompile NW.js compiled (.bin) binaries in Ghidra.</p>
+        <img src="overview.png" alt="Overview Image" />
+
+        <h2>Installation</h2>
+        <blockquote>"I gotta say, it's not the same without mint tea." — Sai Yomiya</blockquote>
+		<p>Theia was developed for <strong>Ghidra v11.3.1</strong> and has not been tested on other versions.</p>
+        <ol>
+			<li>Download the latest release <a href="https://github.com/Llamaware/Theia/releases">from here</a>.</li>
+			<li>In Ghidra: File->Install Extensions...->Press <strong>green (Plus/+) button</strong>, then select the previously downloaded .zip archive to install it. Press <strong>OK</strong>, then restart Ghidra.</li>
+			<li>Drag-n-drop .bin files.</li>
+		</ol>
+        <h2>Build</h2>
+        <blockquote>"You're just a voice, pal! You don't know a damn thing about racing!" — JP</blockquote>
+        <ol>
+			<li>Clone the repo.<br><pre><code>git clone https://github.com/Llamaware/Theia.git</code></pre></li>
+			<li>Import the repo into Eclipse with the GhidraDev plugin installed.</li>
+			<li><strong>Link Ghidra</strong> to your Ghidra installation (option in the project's context menu).</li>
+			<li>Export & build plugin using the project's context menu. Eclipse will generate a resulting .zip archive with the plugin.</li>
+			<li>Continue with step 2 in the Installation section.</li>
+		</ol>
+
+        <h2>Usage</h2>
+        <blockquote>"This is the will of Steins;Gate!" — Okabe Rintaro</blockquote>
+		<p>After installation, you can now use Theia to disassemble binaries that have been compiled with <a href="https://docs.nwjs.io/en/latest/For%20Users/Advanced/Protect%20JavaScript%20Source%20Code/">nwjc</a>. Follow any basic Ghidra usage guide and you should be on your way.</p>
+		<p>You can test Theia using the provided binaries in the /samples folder.</p>
+        <p>Theia currently supports <a href="https://nwjs.io/">NW.js</a> v0.29.0 (x86). Other versions may be supported in the future, but none are planned at this time.</p>
+
+        <h2>Features</h2>
+        <blockquote>"OHHHHHHH YEAAAAAAAH! VERY GOOOOOOOD! One more!" — Furudo Erika</blockquote>
+        <ul>
+            <li>Loader – parses the file, creates the necessary sections for the code and the constants.</li>
+            <li>Analyzer – applied after the loader. Arranges the cross-references, removes stub code that the compiler has generated (simplifies analysis), and tracks codeflow.</li>
+            <li>Disassembler/Decompiler – Thanks to the technologies implemented in Ghidra, when you write the disassembler, you get a decompiler at the same time, which is really convenient. To do this, Ghidra’s internal language SLEIGH is used.</li>
+			<li>PCode Injector – The injector draws up an intermediate representation for the decompiler when this is hard to achieve or even impossible using SLEIGH.</li>
+        </ul>
+
+        <h2>Technical Details</h2>
+        <blockquote>"Don't think about it too hard. You'll give yourself a headache." — Willard H. Wright</blockquote>
+		<p>The .bin file consists of a header and serialized data. The header of the .bin file is virtually identical to the header of bytenode-compiled .jsc files and is described as follows.</p>
+		<img src="table1.png" alt="Table 1" />
+		<p>[More info to come later...]</p>
+        <p>Modifying Theia to work with different version of NW.js is trivial and has been left as an exercise to the reader.</p>
+		<p>The scripts found in the /scripts directory of the repo will be helpful in this case.</p>
+
+        <h2>Issues</h2>
+		<blockquote>"I just can't sit any other way than this. If I sit the way other people do, my reasoning ability drops by 40%." — L</blockquote>
+        <p>Known issues:</p>
+        <ul>
+			<li>Does not properly load .bin files in rare cases. (extremely large files?)</li>
+            <li>Decompiler output is pretty low-level and could be improved.</li>
+        </ul>
+		<p>If you encounter any other issues with Theia, feel free to <a href="https://github.com/Llamaware/Theia/issues">open an issue</a> on our GitHub repository.</p>
+
+        <h2>Conclusion</h2>
+        <blockquote>"Illusions to illusions. The gold truth locks the lock of illusions." — Willard H. Wright</blockquote>
+        <p>The NW.js developers claim:</p>
+		<blockquote>"The JavaScript source code of your application can be protected by compiling to native code and loaded by NW.js. You only have to distribute the compiled code with your app for production."</blockquote>
+		<p>Similarly, the developers of the RPG Maker MV/MZ Cook Tool claim:</p>
+		<blockquote>"It allows RPG Maker MV and MZ game developers to protect the game's source code and plugins from being stolen by compiling the files to their binary form."</blockquote>
+		<p>We find these claims to be dubious, to say the least. Relying on such tools to protect one's source code provides little more than a false sense of security. Compiling to native code or binary form may raise the bar for casual attempts at reverse engineering, but it ultimately amounts to nothing more than security through obscurity. Given the tools and expertise available today, reversing such "protections" is often just a matter of time and effort.</p>
+        </p>Anything that can be compiled can be decompiled, and anything that can be executed can be analyzed. To believe otherwise is to indulge in an illusion — and the harsh truth of reverse engineering is that <a href="https://www.youtube.com/watch?v=jOyfZex7B3E">no locked room remains closed forever</a>.</p>
+		
+		<h2>License</h2>
+        <blockquote>"Legends are a thing of the past. I am a von Karma. That is all." — Franziska von Karma</blockquote>
+        <p>Copyright (C) 2025 Llamaware</p>
+		<p>This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
+		<p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.</p>
+		<p>You should have received a copy of the GNU General Public License along with this program.  If not, see <a href="https://www.gnu.org/licenses/">https://www.gnu.org/licenses/</a>.</p>
+		
+		
+        <h2>Resources</h2>
+        <blockquote>"All according to plan." — Light Yagami</blockquote>
+        <ul>
+			<li><a href="https://github.com/PositiveTechnologies/ghidra_nodejs">ghidra_nodejs</a> by Positive Technologies</li>
+			<li>Positive Technologies' write-up: <a href="https://swarm.ptsecurity.com/how-we-bypassed-bytenode-and-decompiled-node-js-bytecode-in-ghidra/">Part 1</a>, <a href="https://swarm.ptsecurity.com/decompiling-node-js-in-ghidra/">Part 2</a>, <a href="https://swarm.ptsecurity.com/creating-a-ghidra-processor-module-in-sleigh-using-v8-bytecode-as-an-example/">Part 3</a>, <a href="https://swarm.ptsecurity.com/guide-to-p-code-injection/">Part 4</a></li>
+			<li>Chris Eagle, Kara Nance - The Ghidra Book - The Definitive Guide (2020)</li>
+			<li><a href="https://spinsel.dev/2020/06/17/ghidra-brainfuck-processor-1.html">Implementing a brainfuck CPU in Ghidra</a></li>
+			<li><a href="https://pedro-javierf.github.io/devblog/tutorialwritingaghidraloader/">Tutorial: Writing a Ghidra loader</a></li>
+			<li><a href="https://wrongbaud.github.io/posts/writing-a-ghidra-loader/">Writing a GHIDRA Loader: STM32 Edition</a></li>
+			<li><a href="https://habr.com/ru/articles/443318/">Writing a wasm loader for Ghidra</a></li>
+			<li><a href="https://kuterdinel.com/v8-bytecode-reference.html">V8 Bytecode Reference</a>
+		</ul>
+		
+        <h2>Greetz</h2>
+        <blockquote>"I finally did it. The most high-quality video game rip. This is my magnum opus." — SiIvaGunner</blockquote>
+        <p><b>peace to:</b><br>Positive Technologies<br>OpenAI o1<br>The NSA<br>basil.cafe<br>moggy.ai</p>
+    </div>
+</body>
+</html>
