@@ -80,9 +80,7 @@ public final class SharedFunctionInfoStruct implements IAllocatable {
 	public SharedFunctionInfoStruct(final ReservObject obj, final ObjectsAllocator allocator) throws Exception {
 		int pointerSize = allocator.getPointerSize();
 		
-		//TODO: fix offsets
 		kCodeOffset = ObjectsAllocator.kMetaMap + pointerSize;
-		//kCodeOffset = ObjectsAllocator.kMetaMap; // modified
 		kNameOffset = kCodeOffset + pointerSize;
 		kScopeInfoOffset = kNameOffset + pointerSize;
 		kOuterScopeInfoOffset = kScopeInfoOffset + pointerSize;

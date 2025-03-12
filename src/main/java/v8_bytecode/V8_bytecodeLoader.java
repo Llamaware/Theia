@@ -81,16 +81,17 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 		BinaryReader reader = new BinaryReader(provider, true);
 		
 		MessageLog2 log2 = new MessageLog2();
-
+		log.appendMsg("Nwjc loader initialized.");
+		
 		try {
 			final String descr = program.getLanguage().getLanguageDescription().getVariant();
-			log.appendMsg("Language variant descr: " + descr);
+			log2.appendMsg("Language variant descr: " + descr);
 			parser = new NwjcParser(reader, descr.equalsIgnoreCase("x32"), program, monitor, log2);
 			parser.parse();
 			parser.postAllocate();
 			String currentDirectory = System.getProperty("user.dir");
 			log2.writeToFile(currentDirectory + "\\loader.log");
-			log.appendMsg("Debug log written to " + currentDirectory + "\\loader.log");
+			log.appendMsg("Load complete. Debug log written to " + currentDirectory + "\\loader.log");
 		} catch (Exception e) {
 			e.printStackTrace();
 			log2.appendException(e);
