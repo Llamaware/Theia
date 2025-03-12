@@ -17,25 +17,46 @@ import v8_bytecode.structs.SharedFunctionInfoStruct;
 import v8_bytecode.structs.TupleStruct;
 
 public final class SharedFunctionStore implements Serializable {
-	private final String name;
-	private final long offset;
-	private final int size;
-	private final ScopeInfoStore outerScope;
-	private final ConstantPoolStore cp;
+	private String name;
+	private long offset;
+	private int size;
+	private ScopeInfoStore outerScope;
+	private ConstantPoolStore cp;
 	
 	private final Map<String, ScopeInfoStore> scopes;
 	
-	private SharedFunctionStore(final String name, long offset, int size, final ScopeInfoStore scopeInfo, final ScopeInfoStore outerScope, final ConstantPoolStore cp, final Program program) {
-		this.name = name;
-		this.offset = offset;
-		this.size = size;
-		
-		scopes = new HashMap<>();
-		scopes.put("_context", scopeInfo);
-		
-		this.outerScope = outerScope;
-		this.cp = cp;
-	}
+    // Default constructor for placeholder use
+    public SharedFunctionStore(Program program) {
+        // fields will be updated later
+    	this.scopes = new HashMap<>();
+    }
+	
+    // Regular constructor for full initialization.
+    public SharedFunctionStore(String initName, long initOffset, int initSize, 
+                               ScopeInfoStore initScopeInfo, ScopeInfoStore initOuterScope, 
+                               ConstantPoolStore initCp, Program program) {
+        this.name = initName;
+        this.offset = initOffset;
+        this.size = initSize;
+        this.outerScope = initOuterScope;
+        this.cp = initCp;
+        this.scopes = new HashMap<>();
+        this.scopes.put("_context", initScopeInfo);
+    }
+    
+    // Update method to fill in fields for a placeholder.
+    public void update(String newName, long newOffset, int newSize, 
+                       ScopeInfoStore newScopeInfo, ScopeInfoStore newOuterScope, 
+                       ConstantPoolStore newCp) {
+        this.name = newName;
+        this.offset = newOffset;
+        this.size = newSize;
+        this.outerScope = newOuterScope;
+        this.cp = newCp;
+        this.scopes.clear();
+        this.scopes.put("_context", newScopeInfo);
+    }
+    
 
 	public static SharedFunctionStore fromStruct(final SharedFunctionInfoStruct struct, final Program program) {
 		final Object cached = CacheManager.get(struct);
@@ -43,8 +64,12 @@ public final class SharedFunctionStore implements Serializable {
 			return (SharedFunctionStore) cached;
 		}
 		// Cache placeholder immediately
-		final SharedFunctionStore placeholder = new SharedFunctionStore(null, 0, 0, null, null, null, program);
-		CacheManager.put(struct, placeholder);
+		//final SharedFunctionStore placeholder = new SharedFunctionStore(null, 0, 0, null, null, null, program);
+		//CacheManager.put(struct, placeholder);
+		
+	    // Create a placeholder instance and cache it
+	    SharedFunctionStore placeholder = new SharedFunctionStore(program);
+	    CacheManager.put(struct, placeholder);
 		
 		final ScopeInfoStruct scopeInfo1s = struct.getScopeInfo();
 		final Object scopeInfo2s = struct.getOuterScope();
@@ -90,9 +115,11 @@ public final class SharedFunctionStore implements Serializable {
 		}
 		
 		//return new SharedFunctionStore((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp, program);
-		SharedFunctionStore result = new SharedFunctionStore((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp, program); // added
-		CacheManager.put(struct, result); // added
-		return result;
+		//SharedFunctionStore result = new SharedFunctionStore((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp, program); // added
+		//CacheManager.put(struct, result); // added
+		
+		placeholder.update((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp);
+		return placeholder;
 	}
 
 	public String getName() {
@@ -126,4 +153,24 @@ public final class SharedFunctionStore implements Serializable {
 	public ConstantPoolStore getConstantPool() {
 		return cp;
 	}
+	
+	public String debugString() {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("SharedFunctionStore {");
+	    sb.append("\n  name: ").append(name != null ? name : "null");
+	    sb.append("\n  offset: ").append(offset);
+	    sb.append("\n  size: ").append(size);
+	    sb.append("\n  outerScope: ").append(outerScope != null ? outerScope.toString() : "null");
+	    sb.append("\n  constantPool: ").append(cp != null ? cp.toString() : "null");
+	    if (scopes != null && !scopes.isEmpty()) {
+	        sb.append("\n  scopes:");
+	        for (Map.Entry<String, ScopeInfoStore> entry : scopes.entrySet()) {
+	            sb.append("\n    ").append(entry.getKey()).append(": ");
+	            sb.append(entry.getValue() != null ? entry.getValue().toString() : "null");
+	        }
+	    }
+	    sb.append("\n}");
+	    return sb.toString();
+	}
+
 }

@@ -1,6 +1,7 @@
 package v8_bytecode;
 
 import ghidra.program.model.lang.ConstantPool;
+import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
 import v8_bytecode.allocator.NwjcParser;
 import v8_bytecode.allocator.ObjectsAllocator;
@@ -19,6 +20,8 @@ import ghidra.program.model.data.Enum;
 
 public class V8_ConstantPool extends ConstantPool {
 	private final FuncsStorage funcsStorage;
+	
+	private MessageLog2 log = new MessageLog2();
 	
 	private final FlatProgramAPI fpa;
 	private final DataTypeManager mgr;
@@ -41,6 +44,8 @@ public class V8_ConstantPool extends ConstantPool {
 		int indexType = (int) ref[2];
 		
 		// System.out.println(String.format("%04X %04X", address, index));
+		log.appendMsg(String.format("address: %04X index: %04X", address, index));
+		log.appendMsg("indexType: " + indexType);
 		switch (indexType) {
 		case 0: { // constant pool
 			final Object cpItem = funcsStorage.getConstItem(fpa.toAddr(address), index);
@@ -72,11 +77,23 @@ public class V8_ConstantPool extends ConstantPool {
 				res.value = funcsStorage.getRoots().fromString((RootObject)cpItem);
 				res.token = ((RootObject)cpItem).getName();
 			} else if (cpItem instanceof SharedFunctionStore) {
-				final Address funcAddr = fpa.toAddr(((SharedFunctionStore)cpItem).getAddress());
-				res.tag = ConstantPool.POINTER_METHOD;
-				res.type = new PointerDataType(VoidDataType.dataType);
-				res.token = fpa.getFunctionAt(funcAddr).getName();
-			} else if (cpItem instanceof ArrayStore){
+			    final Address funcAddr = fpa.toAddr(((SharedFunctionStore)cpItem).getAddress());
+			    log.appendMsg("SharedFunctionStore.getAddress() returned: " + funcAddr);
+			    Function func = fpa.getFunctionAt(funcAddr);
+			    if (func == null) {
+			        log.appendMsg("Error: No function found at address: " + funcAddr);
+			        log.appendMsg("cpItem: " + ((SharedFunctionStore)cpItem).debugString());
+			        res.token = "NoFunctionFound";
+			    } else {
+			        log.appendMsg("Found function: " + func.getName() + " at address: " + funcAddr);
+			        res.token = func.getName();
+			    }
+			    // Ensure that type is not null
+			    if (res.type == null) {
+			         res.type = new PointerDataType(VoidDataType.dataType);
+			    }
+			}
+			else if (cpItem instanceof ArrayStore){
 				res.tag = ConstantPool.POINTER_FIELD;
 				res.type = mgr.getRootCategory().getDataType(((ArrayStore)cpItem).getName());
 				res.token = ((ArrayStore)cpItem).getName();
@@ -96,15 +113,27 @@ public class V8_ConstantPool extends ConstantPool {
 			res.token = (indexType == 1) ? runsIntrsStore.getIntrinsicName(index) : runsIntrsStore.getRuntimeName(index);
 		} break;
 		case 3: { // context slot
-			final InstructionsStorage instrStorage = InstructionsStorage.load(fpa.getCurrentProgram(), address);
-			
-			if (instrStorage == null) {
-				break;
-			}
-			
-			res.tag = ConstantPool.POINTER_METHOD;
-			res.type = new PointerDataType(VoidDataType.dataType);
-			res.token = instrStorage.getScopeInfo().getContextVar(index).getName();
+		    final InstructionsStorage instrStorage = InstructionsStorage.load(fpa.getCurrentProgram(), address);
+		    
+		    if (instrStorage == null) {
+		        break;
+		    }
+		    
+		    res.tag = ConstantPool.POINTER_METHOD;
+		    res.type = new PointerDataType(VoidDataType.dataType);
+		    
+		    if (instrStorage.getScopeInfo() != null) {
+		        final var contextVar = instrStorage.getScopeInfo().getContextVar(index);
+		        if (contextVar != null) {
+		            res.token = contextVar.getName();
+		        } else {
+		            res.token = "nullContextVar";
+		            log.appendMsg("Warning: getContextVar(" + index + ") returned null");
+		        }
+		    } else {
+		        res.token = "nullScopeInfo";
+		        log.appendMsg("Warning: instrStorage.getScopeInfo() returned null");
+		    }
 		} break;
 		case 4: {
 			final Enum typeOf = (Enum) mgr.getRootCategory().getDataType(TypeOfEnum.NAME);
@@ -130,7 +159,8 @@ public class V8_ConstantPool extends ConstantPool {
 	        res.token = "longlong";
 		} break;
 		}
-
+		String currentDirectory = System.getProperty("user.dir");
+		log.writeToFile(currentDirectory + "\\cpool.log");
 		return res;
 	}
 }

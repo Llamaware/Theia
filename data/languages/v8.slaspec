@@ -152,6 +152,7 @@ define pcodeop GetJSRuntime;
 define pcodeop GetConstant;
 define pcodeop GetNamedProperty;
 define pcodeop GetKeyedProperty;
+define pcodeop GetTemplateObject;
 
 # unimplemented, described in stub mode:
 define pcodeop LdaGlobalInsideTypeof;

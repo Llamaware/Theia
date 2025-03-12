@@ -62,7 +62,7 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 	private static final Map<String, List<Integer>> CP_FUNCS = Map.ofEntries(
         	entry("LdaNamedProperty", List.of(1)),
         	entry("StaNamedOwnProperty", List.of(1)),
-        	entry("StaNamedPropertyStrict", List.of(1)),
+        	entry("StaNamedProperty", List.of(1)),
         	entry("CreateObjectLiteral", List.of(0)),
         	entry("CreateClosure", List.of(0)),
         	entry("LdaConstant", List.of(0)),
