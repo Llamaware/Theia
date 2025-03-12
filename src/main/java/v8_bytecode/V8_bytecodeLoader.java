@@ -89,14 +89,14 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 			parser.parse();
 			parser.postAllocate();
 			String currentDirectory = System.getProperty("user.dir");
-			log2.writeToFile(currentDirectory + "\\ghidra.log");
-			log.appendMsg("Debug log written to " + currentDirectory + "\\ghidra.log");
+			log2.writeToFile(currentDirectory + "\\loader.log");
+			log.appendMsg("Debug log written to " + currentDirectory + "\\loader.log");
 		} catch (Exception e) {
 			e.printStackTrace();
 			log2.appendException(e);
 			String currentDirectory = System.getProperty("user.dir");
-			log2.writeToFile(currentDirectory + "\\ghidra.log");
-			log.appendMsg("Debug log written to " + currentDirectory + "\\ghidra.log");
+			log2.writeToFile(currentDirectory + "\\loader.log");
+			log.appendMsg("An error occurred. Debug log written to " + currentDirectory + "\\loader.log");
 		}
 	}
 }
