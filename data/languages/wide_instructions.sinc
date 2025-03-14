@@ -18,7 +18,7 @@ define token dr_operand(32)
 w_dest: rel is w_kUImm [ rel = inst_start + w_kUImm; ] {
   export *[ram]:4 rel;
 }
-w_destloop: rel is w_kUImm [ rel = inst_start - w_kUImm; ] {
+w_destloop: rel is w_kUImm [ rel = inst_next - w_kUImm; ] {
   export *[ram]:4 rel;
 }
 w_rangeSrc: {  is kReg; w_Pad; w_kUImm  [ offStart = kReg; counter =  w_kUImm;] {range_size = w_kUImm;  export kReg;}
@@ -111,8 +111,8 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :LdaLookupSlot.Wide [w_kIdx] is wide = 0; op = 0x15; w_kIdx {
 	acc = LdaLookupSlot(w_kIdx:4);
 }
-:LdaLookupContextSlot.Wide [w_kIdx], [w_kIdx_2], [w_kUImm] is wide = 0; op = 0x16; w_kIdx; w_kIdx_2; w_kUImm {
-	acc = LdaLookupContextSlot(w_kIdx:4, w_kIdx_2:4, w_kUImm:4);
+:LdaLookupContextSlot.Wide [w_kIdx] is wide = 0; op = 0x16; w_kIdx {
+	acc = LdaLookupContextSlot(w_kIdx:4);
 }
 :LdaLookupGlobalSlot.Wide [w_kIdx], [w_kIdx_2], [w_kUImm] is wide = 0; op = 0x17; w_kIdx; w_kIdx_2; w_kUImm {
 	acc = LdaLookupGlobalSlot(w_kIdx:4, w_kIdx_2:4, w_kUImm:4);
@@ -407,6 +407,10 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :CreateEmptyObjectLiteral.Wide is wide = 0; op = 0x6f {
 	acc = CreateEmptyObjectLiteral(_context);
 }
+:GetTemplateObject.Wide [w_kIdx] is wide = 0; op = 0x70; w_kIdx {
+    cp:4 = cpool(0, inst_start, w_kIdx, $(CP_CONSTANTS));
+    acc = GetTemplateObject(_context, cp);
+}
 :CreateClosure.Wide [w_kIdx], [w_kIdx_2], kFlag8 is wide = 0; op = 0x71; w_kIdx; w_kIdx_2; kFlag8 {
 	cp:4 = cpool(0,inst_start, w_kIdx, $(CP_CONSTANTS));
 	acc = CreateClosure(_context, cp, w_kIdx_2:4, kFlag8:4);
@@ -439,7 +443,7 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :CreateRestParameter.Wide is wide = 0; op = 0x79 {
 	acc = CreateRestParameter();
 }
-:JumpLoop.Wide [w_destloop], [w_kImm] is wide = 0; op = 0x7a; w_destloop; w_kImm {
+:JumpLoop.Wide [w_destloop], [w_kImm:4] is wide = 0; op = 0x7a; w_destloop; w_kImm {
 	CheckOSRLevel(w_kImm:4);
 	goto w_destloop;
 }

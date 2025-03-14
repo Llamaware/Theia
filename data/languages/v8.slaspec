@@ -193,7 +193,7 @@ dest: rel is kUImm [ rel = inst_start + kUImm; ] {
   export *[ram]:4 rel;
 }
 # destination for JumpLoop
-destloop: rel is kUImm [ rel = inst_start - kUImm; ] {
+destloop: rel is kUImm [ rel = inst_next - kUImm; ] {
   export *[ram]:4 rel;
 }
 
@@ -641,7 +641,7 @@ cache_length: kReg is kReg {export kReg;}
 :CreateRestParameter is op = 0x79 {
 	acc = CreateRestParameter();
 }
-:JumpLoop [destloop], [kImm] is op = 0x7a; destloop; kImm {
+:JumpLoop [destloop], [kImm:4] is op = 0x7a; destloop; kImm {
 	CheckOSRLevel(kImm:4);
 	goto destloop;
 }

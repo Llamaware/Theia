@@ -59,6 +59,9 @@ import java.util.List;
 import java.util.Map;
 
 public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
+	
+	private MessageLog2 log2 = new MessageLog2();
+	
 	private static final Map<String, List<Integer>> CP_FUNCS = Map.ofEntries(
         	entry("LdaNamedProperty", List.of(1)),
         	entry("StaNamedOwnProperty", List.of(1)),
@@ -169,12 +172,14 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 			String mnemonic = trimMnemonic(instruction.getMnemonicString());
 			
 			// System.out.println(String.format("0x%08X - %s", addr.getOffset(), instruction));
+			
+			log2.appendMsg(String.format("0x%08X - %s", addr.getOffset(), instruction));
 		
 			if (hasConstantPoolReference(mnemonic)) {
 				for (int opIndex : CP_FUNCS.get(mnemonic)) {
 					int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
-		
+					log2.appendMsg("mnemonic: " + mnemonic);
 					switch(mnemonic) {
 						case "CallRuntime":
 						case "InvokeIntrinsic": {
@@ -373,10 +378,27 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 				}
 			} else if (isJumper(mnemonic)) {
 				for (int opIndex : JUMP_FUNCS.get(mnemonic)) {
-					int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
+					log2.appendMsg("Original scalar value at opIndex " + opIndex + ": " + instruction.getScalar(opIndex));
+					long rawValue = instruction.getScalar(opIndex).getValue();
+					int index = (int) (rawValue & 0xFFFFFFFF);
+					log2.appendMsg("Masked index: " + index);
+					
+					
+					//int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
 					
 					final Object item = funcsStorage.getConstItem(addr, index);
+					
+					int pointerSize = ObjectsAllocator.getPointerSize(program);
+					log2.appendMsg("Pointer size: " + pointerSize);
+
+					int converted;
+					if (item instanceof Integer) {
+					    converted = NwjcParser.smiToInt((int)item, pointerSize);
+					} else {
+					    converted = NwjcParser.smiToInt((long)item, pointerSize);
+					}
+					log2.appendMsg("Converted operand value: " + converted);
 					
 					final Address refAddr;
 					
@@ -389,7 +411,21 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 					boolean jumpConst = mnemonic.equals("JumpConstant");
 					
 					instruction.addOperandReference(opIndex, refAddr, jumpConst ? RefType.UNCONDITIONAL_JUMP : RefType.CONDITIONAL_JUMP, SourceType.ANALYSIS);
-					ObjectsAllocator.disassemble(program, TaskMonitor.DUMMY, refAddr);
+					log2.appendMsg("Calculated reference address: " + refAddr);
+					try {
+						ObjectsAllocator.disassemble(program, TaskMonitor.DUMMY, refAddr);
+					} catch (Exception e) {
+						log2.appendMsg("Failed to disassemble at " + refAddr + ": " + e.getMessage());
+						byte[] bytes = new byte[16];
+						try {
+						    program.getMemory().getBytes(refAddr, bytes);
+						    log2.appendMsg("Bytes at " + refAddr + ": " + Arrays.toString(bytes));
+						} catch (Exception e2) {
+						    log2.appendMsg("Failed to dump bytes at " + refAddr + ": " + e2.getMessage());
+						}
+					}
+					
+					//ObjectsAllocator.disassemble(program, TaskMonitor.DUMMY, refAddr);
 				}
 			}
 		}
@@ -501,5 +537,8 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 		if (funcsStorage != null) {
 			funcsStorage.store(program);
 		}
+		
+		String currentDirectory = System.getProperty("user.dir");
+		log2.writeToFile(currentDirectory + "\\analyzer.log");
 	}
 }

@@ -372,7 +372,14 @@ public final class NwjcParser {
 		}
 		
 		for (final Address dis : doDisasm) {
-			ObjectsAllocator.disassemble(program, monitor, dis);
+			log.appendMsg("Disassembling: " + dis);
+			//ObjectsAllocator.disassemble(program, monitor, dis);
+		    try {
+		        //log.appendMsg("Disassembling: " + dis);
+		        ObjectsAllocator.disassemble(program, monitor, dis);
+		    } catch (Exception e) {
+		        log.appendMsg("Skipping disassembly at " + dis + ": " + e.getMessage());
+		    }
 		}
 	}
 	
