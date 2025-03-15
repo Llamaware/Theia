@@ -275,14 +275,25 @@ public final class NwjcParser {
 		return allocator;
 	}
 	
+	//public static int smiToInt(long value, int pointerSize) {
+	//	if (pointerSize == 4) {
+	//		return (int)(value >> 1L);
+	//	}
+	//	
+	//	return (int)(value >> 32L);
+	//}
+	
 	public static int smiToInt(long value, int pointerSize) {
-		if (pointerSize == 4) {
-			return (int)(value >> 1L);
-		}
-		
-		return (int)(value >> 32L);
+	    if (pointerSize == 4) {
+	        // Standard SMI untagging for 32-bit.
+	        return (int)(value >> 1L);
+	    } else if (pointerSize == 8) {
+	        // For 64-bit, the SMI is stored in the high 32 bits.
+	        return (int)(value >> 32L);
+	    } else {
+	        throw new IllegalArgumentException("Unsupported pointer size: " + pointerSize);
+	    }
 	}
-
 	
 	private void loadSpaceObjects(final ReservObject spaceObjs) throws Exception {
 		final ReservObject firstFunc = (ReservObject)spaceObjs.getAlignedObject(0);
@@ -346,6 +357,7 @@ public final class NwjcParser {
 
 			final Address bcodeAddr = sf.getAddress();
 			doDisasm.add(bcodeAddr);
+			log.appendMsg("bcodeAddr: " + bcodeAddr);
 			
 			// handler addresses
 			final HandlerTableStruct ht = sf.getHandlerTable();
@@ -354,31 +366,57 @@ public final class NwjcParser {
 				continue;
 			}
 			
+			log.appendMsg("ht: " + ht.toString());
+			
 			final List<HandlerTableItemStruct> htItems = ht.getItems();
-			for (int j = 0; j < htItems.size(); ++j) {
-				final HandlerTableItemStruct hti = htItems.get(j);
-				
-				doDisasm.add(bcodeAddr.add(hti.getOffset()));
-				doDisasm.add(bcodeAddr.add(hti.getStartAddress()));
-				doDisasm.add(bcodeAddr.add(hti.getEndAddress()));
-				
-				fpa.setPreComment(bcodeAddr.add(hti.getStartAddress()), String.format("try { // %s_handler_%d start", sf.getName(), j));
-				fpa.setPreComment(bcodeAddr.add(hti.getEndAddress()), String.format("} // %s_handler_%d end", sf.getName(), j));
-				
-				fpa.createLabel(bcodeAddr.add(hti.getOffset()), String.format("%s_handler_%d", sf.getName(), j), true, SourceType.USER_DEFINED);
+			for (int j = 0; j < htItems.size(); ++j) { // TODO: Fix this loop, doesn't work
+			    final HandlerTableItemStruct hti = htItems.get(j);
+			    
+			    // Debug: Log raw values from HandlerTableItemStruct
+			    log.appendMsg("Handler " + j + " - raw offset: " + hti.getOffset());
+			    log.appendMsg("Handler " + j + " - raw start address: " + hti.getStartAddress());
+			    log.appendMsg("Handler " + j + " - raw end address: " + hti.getEndAddress());
+			    
+			    // Compute addresses relative to bcodeAddr
+			    Address offsetAddr = bcodeAddr.add(hti.getOffset());
+			    Address startAddr  = bcodeAddr.add(hti.getStartAddress());
+			    Address endAddr    = bcodeAddr.add(hti.getEndAddress());
+			    
+			    // Debug: Log computed addresses
+			    log.appendMsg("Handler " + j + " - computed offset address: " + offsetAddr);
+			    log.appendMsg("Handler " + j + " - computed start address: " + startAddr);
+			    log.appendMsg("Handler " + j + " - computed end address: " + endAddr);
+			    
+			    // Add addresses for disassembly
+			    doDisasm.add(offsetAddr);
+			    doDisasm.add(startAddr);
+			    doDisasm.add(endAddr);
+			    
+			    // Set pre-comments for disassembly boundaries
+			    fpa.setPreComment(startAddr, String.format("try { // %s_handler_%d start", sf.getName(), j));
+			    fpa.setPreComment(endAddr, String.format("} // %s_handler_%d end", sf.getName(), j));
+			    
+			    // Create label for the handler
+			    fpa.createLabel(offsetAddr, String.format("%s_handler_%d", sf.getName(), j), true, SourceType.USER_DEFINED);
+			    
+			    // Extra debug to confirm labels/comments are set
+			    log.appendMsg("Set label and comments for handler " + j);
 			}
+
 			
 			allocator.getMonitor().incrementProgress(1);
 		}
 		
 		for (final Address dis : doDisasm) {
 			log.appendMsg("Disassembling: " + dis);
+			monitor.setMessage("Disassembling: " + dis); // for debug breakpoint
 			//ObjectsAllocator.disassemble(program, monitor, dis);
 		    try {
 		        //log.appendMsg("Disassembling: " + dis);
 		        ObjectsAllocator.disassemble(program, monitor, dis);
 		    } catch (Exception e) {
 		        log.appendMsg("Skipping disassembly at " + dis + ": " + e.getMessage());
+		        log.appendException(e);
 		    }
 		}
 	}
@@ -460,46 +498,54 @@ public final class NwjcParser {
 	}
 	
 	private RuntimesIntrinsicsStore loadIntrsAndRuntimes() {
-		try {
-			File file = Application.getModuleDataFile("v8_funcs.json").getFile(false);
-			final JsonArray runsAndIntrs = jsonArrayFromFile(file.getAbsolutePath());
-			
-			final List<String> names = new ArrayList<>();
-			final List<List<RuntimeFuncArg>> allArgs = new ArrayList<>();
-			
-			for (final var func : runsAndIntrs) {
-				final JsonObject nameAndArgs = func.getAsJsonObject();
+	    try {
+	        File file = Application.getModuleDataFile("v8_funcs.json").getFile(false);
+	        final JsonArray runsAndIntrs = jsonArrayFromFile(file.getAbsolutePath());
+	        
+	        final List<String> names = new ArrayList<>();
+	        final List<List<RuntimeFuncArg>> allArgs = new ArrayList<>();
+	        
+	        // Parse JSON and build names and argument lists.
+	        for (final var func : runsAndIntrs) {
+	            final JsonObject nameAndArgs = func.getAsJsonObject();
 
-				String funcName = nameAndArgs.get("Name").getAsString();
-				funcName = funcName.substring(1);
+	            // Remove the leading 'k'
+	            String funcName = nameAndArgs.get("Name").getAsString();
+	            funcName = funcName.substring(1);
 
-				JsonArray args = nameAndArgs.get("Args").getAsJsonArray();
+	            JsonArray args = nameAndArgs.get("Args").getAsJsonArray();
+	            List<RuntimeFuncArg> funcArgs = new ArrayList<>();
 
-				List<RuntimeFuncArg> funcArgs = new ArrayList<>();
-
-				for (final var arg : args) {
-					final JsonObject argObj = arg.getAsJsonObject();
-					String name = argObj.get("Name").getAsString();
-
-					String type = null;
-					if (!name.equals("...")) {
-						type = argObj.get("Type").getAsString();
-					}
-
-					funcArgs.add(new RuntimeFuncArg(name, type));
-				}
-				
-				names.add(funcName);
-				allArgs.add(funcArgs);
-			}
-			
-			return new RuntimesIntrinsicsStore(names, allArgs);
-		} catch (IOException e) {
-			e.printStackTrace();
-			log.appendException(e);
-			return null;
-		}
+	            for (final var arg : args) {
+	                final JsonObject argObj = arg.getAsJsonObject();
+	                String argName = argObj.get("Name").getAsString();
+	                String argType = null;
+	                if (!argName.equals("...")) {
+	                    argType = argObj.get("Type").getAsString();
+	                }
+	                funcArgs.add(new RuntimeFuncArg(argName, argType));
+	            }
+	            
+	            names.add(funcName);
+	            allArgs.add(funcArgs);
+	        }
+	        
+	        // Build the new mapping: for each intrinsic function index i, set magic number = names.size() + i.
+	        Map<Integer, Integer> newIntrinsicsToRuntimes = new HashMap<>();
+	        int count = names.size();
+	        for (int i = 0; i < count; i++) {
+	            newIntrinsicsToRuntimes.put(i, count + i);
+	        }
+	        
+	        // Create and return the new RuntimesIntrinsicsStore.
+	        return new RuntimesIntrinsicsStore(names, allArgs, newIntrinsicsToRuntimes);
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	        log.appendException(e);
+	        return null;
+	    }
 	}
+
 	
 	private void deserializeDeferredObjects() throws IOException {
 		while (true) {

@@ -101,5 +101,26 @@ public final class HandlerTableStruct implements IAllocatable {
 	public DataType toDataType() throws DuplicateNameException, IOException {
 		return s;
 	}
+	
+	@Override
+	public String toString() {
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("HandlerTableStruct { ");
+	    sb.append("count: ").append(count).append(", ");
+	    sb.append("baseAddr: ").append(baseAddr).append(", ");
+	    sb.append("items: \n[");
+	    for (int i = 0; i < items.size(); i++) {
+	        HandlerTableItemStruct item = items.get(i);
+	        sb.append("{ offset: ").append(item.getOffset());
+	        sb.append(", start: ").append(item.getStartAddress());
+	        sb.append(", end: ").append(item.getEndAddress()).append(" }");
+	        if (i < items.size() - 1) {
+	            sb.append(", \n");
+	        }
+	    }
+	    sb.append("] }");
+	    return sb.toString();
+	}
+
 
 }

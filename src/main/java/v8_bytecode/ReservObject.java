@@ -56,15 +56,41 @@ public final class ReservObject {
 		return (int)objects.get(offset);
 	}
 	
+	//public int getSmiInt(long offset) {
+	//	final int obj1 = (int)objects.get(offset);
+	//	
+	//	if (kPointerSize == 4) {
+	//		return NwjcParser.smiToInt(obj1, kPointerSize);
+	//	}
+	//	
+	//	final long obj2 = (int)objects.get(offset + 4);
+	//	return NwjcParser.smiToInt(obj2 << 32L, kPointerSize);
+	//}
+	
 	public int getSmiInt(long offset) {
-		final int obj1 = (int)objects.get(offset);
-		
-		if (kPointerSize == 4) {
-			return NwjcParser.smiToInt(obj1, kPointerSize);
-		}
-		
-		final long obj2 = (int)objects.get(offset + 4);
-		return NwjcParser.smiToInt(obj2 << 32L, kPointerSize);
+	    // Retrieve the raw value at the given offset.
+	    Object rawObj = objects.get(offset);
+	    if (!(rawObj instanceof Number)) {
+	        throw new IllegalStateException("Expected a number at offset " + offset + ", but got: " + rawObj);
+	    }
+	    int rawValue = ((Number) rawObj).intValue();
+	    
+	    if (kPointerSize == 4) {
+	        // For 32-bit, untag by shifting right by 1.
+	        return NwjcParser.smiToInt(rawValue, kPointerSize);
+	    } else if (kPointerSize == 8) {
+	        // For 64-bit, ensure we get the number from the upper half.
+	        Object nextObj = objects.get(offset + 4);
+	        if (!(nextObj instanceof Number)) {
+	            throw new IllegalStateException("Expected a number at offset " + (offset + 4) + ", but got: " + nextObj);
+	        }
+	        int nextValue = ((Number) nextObj).intValue();
+	        // Shift the next value into the high 32 bits.
+	        long shifted = ((long) nextValue) << 32;
+	        return NwjcParser.smiToInt(shifted, kPointerSize);
+	    } else {
+	        throw new IllegalStateException("Unsupported pointer size: " + kPointerSize);
+	    }
 	}
 	
 	public void addObject(long address, Object object) {

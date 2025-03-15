@@ -21,3 +21,7 @@
 `parse_slaspec.py` - parse a slaspec and generate `old_opcodes.txt`
 
 `remap_opcodes.py` - use `old_opcodes.txt` and `new_opcodes.txt` to remap `v8.slaspec`, etc. (warning: needs manual correction for functions that no longer exist)
+
+`new_functions.cpp` - generate text file of intrinsic functions
+
+`merge_function_json.py` - use `new_functions.txt` and old `v8_funcs.json` to generate an updated `v8_funcs.json`

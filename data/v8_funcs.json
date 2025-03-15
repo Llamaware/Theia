@@ -1,19 +1,19 @@
 [
     {
-		"Name": "kForInPrepare",
-		"Args": [
-			{
-				"Name": "receiver",
-				"Type": "JSReceiver"
-			}
-		]
-    },
-    {
         "Name": "kLoadLookupSlotForCall",
         "Args": [
             {
                 "Name": "name",
                 "Type": "String"
+            }
+        ]
+    },
+    {
+        "Name": "kDebugBreakOnBytecode",
+        "Args": [
+            {
+                "Name": "value",
+                "Type": "Object"
             }
         ]
     },
@@ -25,7 +25,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -54,7 +54,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -87,7 +87,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             }
         ]
@@ -112,7 +112,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             }
         ]
@@ -172,7 +172,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Name"
             },
             {
@@ -240,6 +240,52 @@
         ]
     },
     {
+        "Name": "kStoreGlobalIC_Miss",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg4",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kStoreGlobalIC_Slow",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg4",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg5",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kStoreIC_Miss",
         "Args": [
             {
@@ -259,7 +305,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Name"
             }
         ]
@@ -355,6 +401,23 @@
         ]
     },
     {
+        "Name": "kTrySliceSimpleNonFastElements",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kNewArray",
         "Args": [
             {
@@ -369,9 +432,9 @@
                 "Name": "type_info",
                 "Type": "HeapObject"
             },
-			{
-				"Name": "..."
-			}
+            {
+                "Name": "..."
+            }
         ]
     },
     {
@@ -403,7 +466,7 @@
                 "Type": "JSObject"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Int32"
             }
         ]
@@ -655,6 +718,127 @@
         ]
     },
     {
+        "Name": "kBigIntBinaryOp",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntCompareToBigInt",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntCompareToNumber",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntEqualToBigInt",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntEqualToNumber",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntEqualToString",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntToBoolean",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntToNumber",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kBigIntUnaryOp",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kThrowUnsupportedSuperError",
         "Args": []
     },
@@ -718,24 +902,6 @@
         ]
     },
     {
-        "Name": "kInstallClassNameAccessor",
-        "Args": [
-            {
-                "Name": "object",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kInstallClassNameAccessorWithCheck",
-        "Args": [
-            {
-                "Name": "object",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
         "Name": "kLoadFromSuper",
         "Args": [
             {
@@ -764,7 +930,7 @@
                 "Type": "JSObject"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             }
         ]
@@ -823,7 +989,7 @@
                 "Type": "JSObject"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -844,7 +1010,7 @@
                 "Type": "JSObject"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -968,7 +1134,7 @@
                 "Type": "JSWeakCollection"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -985,7 +1151,7 @@
                 "Type": "JSWeakCollection"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -1066,6 +1232,15 @@
         ]
     },
     {
+        "Name": "kFunctionFirstExecution",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kCompileOptimized_NotConcurrent",
         "Args": [
             {
@@ -1082,10 +1257,6 @@
                 "Type": "JSFunction"
             }
         ]
-    },
-    {
-        "Name": "kNotifyStubFailure",
-        "Args": []
     },
     {
         "Name": "kNotifyDeoptimized",
@@ -1175,15 +1346,6 @@
     {
         "Name": "kHandleDebuggerStatement",
         "Args": []
-    },
-    {
-        "Name": "kDebugBreakOnBytecode",
-        "Args": [
-            {
-                "Name": "value",
-                "Type": "Object"
-            }
-        ]
     },
     {
         "Name": "kSetDebugEventListener",
@@ -1829,19 +1991,6 @@
         ]
     },
     {
-        "Name": "kDebugAsyncEventEnqueueRecurring",
-        "Args": [
-            {
-                "Name": "promise",
-                "Type": "JSPromise"
-            },
-            {
-                "Name": "status",
-                "Type": "Smi"
-            }
-        ]
-    },
-    {
         "Name": "kDebugAsyncFunctionPromiseCreated",
         "Args": [
             {
@@ -1912,19 +2061,6 @@
         ]
     },
     {
-        "Name": "kForInFilter",
-        "Args": [
-            {
-                "Name": "receiver",
-                "Type": "JSReceiver"
-            },
-            {
-                    "Name": "key",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
         "Name": "kForInHasProperty",
         "Args": [
             {
@@ -1932,8 +2068,21 @@
                 "Type": "JSReceiver"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "kInterpreterDeserializeLazy",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
             }
         ]
     },
@@ -2026,19 +2175,6 @@
         ]
     },
     {
-        "Name": "kFunctionSetPrototype",
-        "Args": [
-            {
-                "Name": "fun",
-                "Type": "JSFunction"
-            },
-            {
-                "Name": "value",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
         "Name": "kFunctionIsAPIFunction",
         "Args": [
             {
@@ -2079,15 +2215,6 @@
         ]
     },
     {
-        "Name": "kSetForceInlineFlag",
-        "Args": [
-            {
-                "Name": "object",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
         "Name": "kCall",
         "Args": [
             {
@@ -2098,17 +2225,8 @@
                 "Name": "receiver",
                 "Type": "Object"
             },
-			{
-				"Name": "..."
-			}
-        ]
-    },
-    {
-        "Name": "kConvertReceiver",
-        "Args": [
             {
-                "Name": "receiver",
-                "Type": "Object"
+                "Name": "..."
             }
         ]
     },
@@ -2272,314 +2390,6 @@
         ]
     },
     {
-        "Name": "kCanonicalizeLanguageTag",
-        "Args": [
-            {
-                "Name": "locale_id_str",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kAvailableLocalesOf",
-        "Args": [
-            {
-                "Name": "service",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kGetDefaultICULocale",
-        "Args": []
-    },
-    {
-        "Name": "kIsInitializedIntlObject",
-        "Args": [
-            {
-                "Name": "input",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
-        "Name": "kIsInitializedIntlObjectOfType",
-        "Args": [
-            {
-                "Name": "input",
-                "Type": "Object"
-            },
-            {
-                "Name": "expected_type",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kMarkAsInitializedIntlObjectOfType",
-        "Args": [
-            {
-                "Name": "input",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "type",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kCreateDateTimeFormat",
-        "Args": [
-            {
-                "Name": "locale",
-                "Type": "String"
-            },
-            {
-                "Name": "options",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "resolved",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kInternalDateFormat",
-        "Args": [
-            {
-                "Name": "date_format_holder",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "date",
-                "Type": "JSDate"
-            }
-        ]
-    },
-    {
-        "Name": "kInternalDateFormatToParts",
-        "Args": [
-            {
-                "Name": "date_format_holder",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "date",
-                "Type": "JSDate"
-            }
-        ]
-    },
-    {
-        "Name": "kCreateNumberFormat",
-        "Args": [
-            {
-                "Name": "locale",
-                "Type": "String"
-            },
-            {
-                "Name": "options",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "resolved",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kInternalNumberFormat",
-        "Args": [
-            {
-                "Name": "number_format_holder",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "number",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
-        "Name": "kCurrencyDigits",
-        "Args": [
-            {
-                "Name": "currency",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kCreateCollator",
-        "Args": [
-            {
-                "Name": "locale",
-                "Type": "String"
-            },
-            {
-                "Name": "options",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "resolved",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kInternalCompare",
-        "Args": [
-            {
-                "Name": "collator_holder",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "string1",
-                "Type": "String"
-            },
-            {
-                "Name": "string2",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kCreatePluralRules",
-        "Args": [
-            {
-                "Name": "locale",
-                "Type": "String"
-            },
-            {
-                "Name": "options",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "resolved",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kPluralRulesSelect",
-        "Args": [
-            {
-                "Name": "plural_rules_holder",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "number",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
-        "Name": "kCreateBreakIterator",
-        "Args": [
-            {
-                "Name": "locale",
-                "Type": "String"
-            },
-            {
-                "Name": "options",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "resolved",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kBreakIteratorAdoptText",
-        "Args": [
-            {
-                "Name": "break_iterator_holder",
-                "Type": "JSObject"
-            },
-            {
-                "Name": "text",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kBreakIteratorFirst",
-        "Args": [
-            {
-                "Name": "break_iterator_holder",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kBreakIteratorNext",
-        "Args": [
-            {
-                "Name": "break_iterator_holder",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kBreakIteratorCurrent",
-        "Args": [
-            {
-                "Name": "break_iterator_holder",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kBreakIteratorBreakType",
-        "Args": [
-            {
-                "Name": "break_iterator_holder",
-                "Type": "JSObject"
-            }
-        ]
-    },
-    {
-        "Name": "kStringToLowerCaseIntl",
-        "Args": [
-            {
-                "Name": "s",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kStringToUpperCaseIntl",
-        "Args": [
-            {
-                "Name": "s",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kStringLocaleConvertCase",
-        "Args": [
-            {
-                "Name": "s",
-                "Type": "String"
-            },
-            {
-                "Name": "is_upper",
-                "Type": "Boolean"
-            },
-            {
-                "Name": "lang_arg",
-                "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kDateCacheVersion",
-        "Args": []
-    },
-    {
         "Name": "kAllocateInNewSpace",
         "Args": [
             {
@@ -2638,6 +2448,15 @@
             {
                 "Name": "object",
                 "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "kDeserializeLazy",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
             }
         ]
     },
@@ -2903,9 +2722,9 @@
                 "Name": "message_id_smi",
                 "Type": "Smi"
             },
-			{
-				"Name": "..."
-			}
+            {
+                "Name": "..."
+            }
         ]
     },
     {
@@ -2932,9 +2751,9 @@
                 "Name": "message_id_smi",
                 "Type": "Smi"
             },
-			{
-				"Name": "..."
-			}
+            {
+                "Name": "..."
+            }
         ]
     },
     {
@@ -2965,6 +2784,24 @@
             {
                 "Name": "target",
                 "Type": "JSFunction"
+            }
+        ]
+    },
+    {
+        "Name": "kGetTemplateObject",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kReportMessage",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
             }
         ]
     },
@@ -3213,6 +3050,10 @@
         ]
     },
     {
+        "Name": "kGetImportMetaObject",
+        "Args": []
+    },
+    {
         "Name": "kGetModuleNamespace",
         "Args": [
             {
@@ -3280,15 +3121,6 @@
             {
                 "Name": "subject",
                 "Type": "String"
-            }
-        ]
-    },
-    {
-        "Name": "kNumberToString",
-        "Args": [
-            {
-                "Name": "number",
-                "Type": "Number"
             }
         ]
     },
@@ -3432,6 +3264,42 @@
         ]
     },
     {
+        "Name": "kObjectValues",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kObjectValuesSkipFastPath",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kObjectEntries",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kObjectEntriesSkipFastPath",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kGetProperty",
         "Args": [
             {
@@ -3439,7 +3307,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             }
         ]
@@ -3452,7 +3320,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key_obj",
+                "Name": "key_obj",
                 "Type": "Object"
             }
         ]
@@ -3486,7 +3354,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -3507,7 +3375,7 @@
                 "Type": "JSObject"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -3537,7 +3405,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -3563,7 +3431,7 @@
                 "Type": "Object"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             }
         ]
@@ -3617,11 +3485,11 @@
         ]
     },
     {
-        "Name": "kFinalizeInstanceSize",
+        "Name": "kCompleteInobjectSlackTrackingForMap",
         "Args": [
             {
-                "Name": "initial_map",
-                "Type": "Map"
+                "Name": "arg1",
+                "Type": "Unknown"
             }
         ]
     },
@@ -3805,9 +3673,9 @@
                 "Name": "source",
                 "Type": "Object"
             },
-			{
-				"Name": "..."
-			}
+            {
+                "Name": "..."
+            }
         ]
     },
     {
@@ -3906,6 +3774,15 @@
         ]
     },
     {
+        "Name": "kToNumeric",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kToInteger",
         "Args": [
             {
@@ -3968,23 +3845,6 @@
         ]
     },
     {
-        "Name": "kCompare",
-        "Args": [
-            {
-                "Name": "x",
-                "Type": "Object"
-            },
-            {
-                "Name": "y",
-                "Type": "Object"
-            },
-            {
-                "Name": "ncr",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
         "Name": "kHasInPrototypeChain",
         "Args": [
             {
@@ -4018,7 +3878,7 @@
                 "Type": "JSReceiver"
             },
             {
-                    "Name": "key",
+                "Name": "key",
                 "Type": "Object"
             },
             {
@@ -4033,6 +3893,19 @@
             {
                 "Name": "obj",
                 "Type": "JSReceiver"
+            }
+        ]
+    },
+    {
+        "Name": "kGetOwnPropertyDescriptor",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
             }
         ]
     },
@@ -4306,24 +4179,6 @@
         ]
     },
     {
-        "Name": "kEnqueuePromiseReactionJob",
-        "Args": [
-            {
-                "Name": "info",
-                "Type": "PromiseReactionJobInfo"
-            }
-        ]
-    },
-    {
-        "Name": "kEnqueuePromiseResolveThenableJob",
-        "Args": [
-            {
-                "Name": "info",
-                "Type": "PromiseResolveThenableJobInfo"
-            }
-        ]
-    },
-    {
         "Name": "kPromiseHookInit",
         "Args": [
             {
@@ -4453,15 +4308,6 @@
         ]
     },
     {
-        "Name": "kJSProxyRevoke",
-        "Args": [
-            {
-                "Name": "proxy",
-                "Type": "JSProxy"
-            }
-        ]
-    },
-    {
         "Name": "kGetPropertyWithReceiver",
         "Args": [
             {
@@ -4474,23 +4320,6 @@
             },
             {
                 "Name": "receiver",
-                "Type": "Object"
-            }
-        ]
-    },
-    {
-        "Name": "kCheckProxyGetTrapResult",
-        "Args": [
-            {
-                "Name": "name",
-                "Type": "Name"
-            },
-            {
-                "Name": "target",
-                "Type": "JSReceiver"
-            },
-            {
-                "Name": "trap_result",
                 "Type": "Object"
             }
         ]
@@ -4509,19 +4338,48 @@
         ]
     },
     {
-        "Name": "kIsRegExp",
+        "Name": "kSetPropertyWithReceiver",
         "Args": [
             {
-                "Name": "obj",
-                "Type": "Object"
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg3",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg4",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg5",
+                "Type": "Unknown"
             }
         ]
     },
     {
-        "Name": "kRegExpCreate",
+        "Name": "kCheckProxyGetSetTrapResult",
         "Args": [
             {
-                "Name": "source_object",
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kIsRegExp",
+        "Args": [
+            {
+                "Name": "obj",
                 "Type": "Object"
             }
         ]
@@ -4637,27 +4495,6 @@
             {
                 "Name": "limit_obj",
                 "Type": "Object"
-            }
-        ]
-    },
-    {
-        "Name": "kStringReplaceGlobalRegExpWithString",
-        "Args": [
-            {
-                "Name": "subject",
-                "Type": "String"
-            },
-            {
-                "Name": "regexp",
-                "Type": "JSRegExp"
-            },
-            {
-                "Name": "replacement",
-                "Type": "String"
-            },
-            {
-                "Name": "last_match_info",
-                "Type": "RegExpMatchInfo"
             }
         ]
     },
@@ -5066,6 +4903,19 @@
         ]
     },
     {
+        "Name": "kStringTrim",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kStringIndexOf",
         "Args": [
             {
@@ -5152,28 +5002,15 @@
         ]
     },
     {
-        "Name": "kStringCharCodeAtRT",
+        "Name": "kStringCharCodeAt",
         "Args": [
             {
                 "Name": "subject",
                 "Type": "String"
             },
             {
-                "Name": "i",
+                "Name": "position",
                 "Type": "Uint32"
-            }
-        ]
-    },
-    {
-        "Name": "kStringCompare",
-        "Args": [
-            {
-                "Name": "x",
-                "Type": "String"
-            },
-            {
-                "Name": "y",
-                "Type": "String"
             }
         ]
     },
@@ -5338,19 +5175,6 @@
         ]
     },
     {
-        "Name": "kStringCharCodeAt",
-        "Args": [
-            {
-                "Name": "subject",
-                "Type": "String"
-            },
-            {
-                "Name": "position",
-                "Type": "Uint32"
-            }
-        ]
-    },
-    {
         "Name": "kStringMaxLength",
         "Args": []
     },
@@ -5470,10 +5294,10 @@
     {
         "Name": "kOptimizeOsr",
         "Args": [
-			{
-				"Name": "..."
-			}
-		]
+            {
+                "Name": "..."
+            }
+        ]
     },
     {
         "Name": "kNeverOptimizeFunction",
@@ -5692,6 +5516,15 @@
         ]
     },
     {
+        "Name": "kHasFastElements",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
         "Name": "kHasSmiElements",
         "Args": [
             {
@@ -5898,8 +5731,25 @@
         ]
     },
     {
+        "Name": "kIsWasmTrapHandlerEnabled",
+        "Args": []
+    },
+    {
+        "Name": "kGetWasmRecoveredTrapCount",
+        "Args": []
+    },
+    {
         "Name": "kDisallowCodegenFromStrings",
         "Args": []
+    },
+    {
+        "Name": "kDisallowWasmCodegen",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
     },
     {
         "Name": "kValidateWasmInstancesChain",
@@ -5977,6 +5827,42 @@
             {
                 "Name": "function_index",
                 "Type": "Smi"
+            }
+        ]
+    },
+    {
+        "Name": "kWasmTraceMemory",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kCompleteInobjectSlackTracking",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kIsLiftoffFunction",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            }
+        ]
+    },
+    {
+        "Name": "kFreezeWasmLazyCompilation",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
             }
         ]
     },
@@ -6061,61 +5947,6 @@
         ]
     },
     {
-        "Name": "kTypedArraySetFromArrayLike",
-        "Args": [
-            {
-                "Name": "target",
-                "Type": "JSTypedArray"
-            },
-            {
-                "Name": "source",
-                "Type": "Object"
-            },
-            {
-                "Name": "source_length",
-                "Type": "Int32"
-            },
-            {
-                "Name": "offset",
-                "Type": "Int32"
-            }
-        ]
-    },
-    {
-        "Name": "kTypedArraySetFromOverlapping",
-        "Args": [
-            {
-                "Name": "target",
-                "Type": "JSTypedArray"
-            },
-            {
-                "Name": "source",
-                "Type": "JSTypedArray"
-            },
-            {
-                "Name": "offset",
-                "Type": "Int32"
-            }
-        ]
-    },
-    {
-        "Name": "kTypedArraySetFastCases",
-        "Args": [
-            {
-                "Name": "target",
-                "Type": "JSTypedArray"
-            },
-            {
-                "Name": "source",
-                "Type": "JSTypedArray"
-            },
-            {
-                "Name": "offset_obj",
-                "Type": "Number"
-            }
-        ]
-    },
-    {
         "Name": "kTypedArraySortFast",
         "Args": [
             {
@@ -6125,8 +5956,17 @@
         ]
     },
     {
-        "Name": "kTypedArrayMaxSizeInHeap",
-        "Args": []
+        "Name": "kTypedArraySet",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
     },
     {
         "Name": "kIsTypedArray",
@@ -6187,10 +6027,6 @@
         ]
     },
     {
-        "Name": "kWasmMemorySize",
-        "Args": []
-    },
-    {
         "Name": "kThrowWasmError",
         "Args": [
             {
@@ -6204,21 +6040,25 @@
         ]
     },
     {
-        "Name": "kThrowWasmErrorFromTrapIf",
-        "Args": [
-            {
-                "Name": "message_id",
-                "Type": "Smi"
-            }
-        ]
-    },
-    {
         "Name": "kThrowWasmStackOverflow",
         "Args": []
     },
     {
         "Name": "kWasmThrowTypeError",
         "Args": []
+    },
+    {
+        "Name": "kWasmThrowCreate",
+        "Args": [
+            {
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
+            }
+        ]
     },
     {
         "Name": "kWasmThrow",
@@ -6230,24 +6070,28 @@
         ]
     },
     {
-        "Name": "kWasmRethrow",
+        "Name": "kWasmGetExceptionRuntimeId",
         "Args": []
     },
     {
-        "Name": "kWasmGetExceptionTag",
+        "Name": "kWasmExceptionSetElement",
         "Args": [
             {
-                "Name": "exception",
-                "Type": "Object*"
+                "Name": "arg1",
+                "Type": "Unknown"
+            },
+            {
+                "Name": "arg2",
+                "Type": "Unknown"
             }
         ]
     },
     {
-        "Name": "kWasmSetCaughtExceptionValue",
+        "Name": "kWasmExceptionGetElement",
         "Args": [
             {
-                "Name": "exception",
-                "Type": "Object*"
+                "Name": "arg1",
+                "Type": "Unknown"
             }
         ]
     },
@@ -6270,14 +6114,6 @@
     },
     {
         "Name": "kWasmStackGuard",
-        "Args": []
-    },
-    {
-        "Name": "kSetThreadInWasm",
-        "Args": []
-    },
-    {
-        "Name": "kClearThreadInWasm",
         "Args": []
     },
     {
