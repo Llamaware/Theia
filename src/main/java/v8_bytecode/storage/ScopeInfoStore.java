@@ -83,6 +83,9 @@ public final class ScopeInfoStore implements Serializable {
 			return ctxVars.get(index);
 		}
 		
-		return outerScope.getContextVar(index, depth - 1);
+		if (outerScope != null) {
+			return outerScope.getContextVar(index, depth - 1);
+		}
+		return null;
 	}
 }

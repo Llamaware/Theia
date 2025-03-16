@@ -169,14 +169,20 @@ public final class FuncsStorage extends PrivateSaveable {
 	
 	public Object getConstItem(final Address addr, int index) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
-		final ConstantPoolStore cp = sharedFunc.getConstantPool();
-		return cp.getConstItem(index);
+		if (sharedFunc != null) {
+			final ConstantPoolStore cp = sharedFunc.getConstantPool();
+			return cp.getConstItem(index);
+		}
+		return null;
 	}
 	
 	public long getConstItemAddress(final Address addr, int index) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
-		final ConstantPoolStore cp = sharedFunc.getConstantPool();
-		return cp.getConstItemAddress(index);
+		if (sharedFunc != null) {
+			final ConstantPoolStore cp = sharedFunc.getConstantPool();
+			return cp.getConstItemAddress(index);
+		}
+		return -1;
 	}
 
 	@Override

@@ -84,6 +84,9 @@ public final class SharedFunctionStore implements Serializable {
 			
 			final List<ConstantPoolItemStore> items = new ArrayList<>();
 			for (final Pair<Object, Address> item : cpItems) {
+				if (item.second == null) {
+					continue;
+				}
 				Object obj = null;
 				
 				if (item.first instanceof SharedFunctionInfoStruct) {
@@ -118,7 +121,11 @@ public final class SharedFunctionStore implements Serializable {
 		//SharedFunctionStore result = new SharedFunctionStore((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp, program); // added
 		//CacheManager.put(struct, result); // added
 		
-		placeholder.update((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp);
+		//placeholder.update((String)struct.getName(), struct.getAddress().getOffset(), struct.getSize(), siStore, osiStore, cp);
+		
+		Address addr = struct.getAddress();
+		long offset = (addr != null) ? addr.getOffset() : 0; // default to 0
+		placeholder.update((String)struct.getName(), offset, struct.getSize(), siStore, osiStore, cp);
 		return placeholder;
 	}
 

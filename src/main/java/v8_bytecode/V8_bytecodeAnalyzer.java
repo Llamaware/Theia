@@ -218,8 +218,13 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							}
 						} break;
 						case "CreateClosure": {
- 							final SharedFunctionStore item = (SharedFunctionStore) funcsStorage.getConstItem(addr, index);
-							instruction.addOperandReference(opIndex, fpa.toAddr(item.getAddress()), RefType.DATA, SourceType.ANALYSIS);
+							Object constItem = funcsStorage.getConstItem(addr, index);
+							if (constItem != null) {
+	 							final SharedFunctionStore item = (SharedFunctionStore) funcsStorage.getConstItem(addr, index);
+								instruction.addOperandReference(opIndex, fpa.toAddr(item.getAddress()), RefType.DATA, SourceType.ANALYSIS);
+							} else {
+								log2.appendMsg("CreateClosure item is null");
+							}
 						} break;
 						case "CreateBlockContext": {
 							currentScope = (ScopeInfoStore) funcsStorage.getConstItem(addr, index);
@@ -292,8 +297,13 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							}
 						} break;
 						default: {
-							final Address itemAddr = fpa.toAddr(funcsStorage.getConstItemAddress(addr, index));
-							instruction.addOperandReference(opIndex, itemAddr, RefType.READ, SourceType.ANALYSIS);
+						    long constItemAddr = funcsStorage.getConstItemAddress(addr, index);
+						    if (constItemAddr < 0) {
+						        log2.appendMsg("Constant pool item address is invalid at " + addr + " for index " + index);
+						    } else {
+						        final Address itemAddr = fpa.toAddr(constItemAddr);
+						        instruction.addOperandReference(opIndex, itemAddr, RefType.READ, SourceType.ANALYSIS);
+						    }
 						}
 					}
 				}
