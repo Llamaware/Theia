@@ -2968,12 +2968,7 @@
     },
     {
         "Name": "kThrowSymbolIteratorInvalid",
-        "Args": [
-            {
-                "Name": "iterator",
-                "Type": "Object"
-            }
-        ]
+        "Args": []
     },
     {
         "Name": "kThrowNonCallableInInstanceOfCheck",

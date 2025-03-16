@@ -28,3 +28,6 @@
 
 `merge_function_json.py` - use `new_functions.txt`, `new_interpreter_intrinsics.txt`, and old `v8_funcs.json` to generate an updated `v8_funcs.json`
 
+`compare_json.py` - find all top-level names in a json that aren't in another json
+
+`json_empty_args.py` - find all names with an empty args array in a json

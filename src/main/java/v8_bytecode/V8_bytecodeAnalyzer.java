@@ -174,12 +174,11 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 			// System.out.println(String.format("0x%08X - %s", addr.getOffset(), instruction));
 			
 			log2.appendMsg(String.format("0x%08X - %s", addr.getOffset(), instruction));
-		
+			log2.appendMsg("mnemonic: " + mnemonic);
 			if (hasConstantPoolReference(mnemonic)) {
 				for (int opIndex : CP_FUNCS.get(mnemonic)) {
 					int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
-					log2.appendMsg("mnemonic: " + mnemonic + ", index: " + index);
 					switch(mnemonic) {
 						case "CallRuntime":
 						case "InvokeIntrinsic": {
@@ -321,13 +320,22 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							
 							if (mnemonic.contains("Current")) {
 								scope = funcsStorage.getScopeInfo(addr, _context);
-								var = scope.getContextVar(index);
+								if (scope != null) {
+									var = scope.getContextVar(index);
+								}
+								else {
+									log2.appendMsg("scope is null, skipping var " + index + " in " + mnemonic);
+								}
 							}
 							else {
 								final Register reg = instruction.getRegister(0);
 								int depth = (int) (instruction.getScalar(opIndex + 1).getValue() & 0xFFFFFFFF);
 								scope = funcsStorage.getScopeInfo(addr, reg.getName());
-								var = scope.getContextVar(index, depth);
+								if (scope != null) {
+									var = scope.getContextVar(index, depth);
+								} else {
+									log2.appendMsg("scope is null, skipping var " + index + " in " + mnemonic);
+								}
 							}
 							
 							if (var != null) {
@@ -337,7 +345,7 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							InstructionsStorage.create(program, addr.getOffset(), scope);
 						} catch (Exception e) {
 							e.printStackTrace();
-							log.appendException(e);
+							log2.appendException(e);
 						}
 					}
 					}
