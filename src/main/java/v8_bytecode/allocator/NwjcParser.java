@@ -139,7 +139,8 @@ public final class NwjcParser {
 	        "Hey! Listen!",
 	        "It's high noon...",
 	        "All according to keikaku.",
-	        "Deploying surprise in 5... 4..."
+	        "Deploying surprise in 5... 4...",
+	        "Made with love by TsundereGPT~"
 	    };
 
 	    Random random = new Random();
@@ -363,6 +364,7 @@ public final class NwjcParser {
 			final HandlerTableStruct ht = sf.getHandlerTable();
 			
 			if (ht == null) {
+				log.appendMsg("ht is null, skipping");
 				continue;
 			}
 			
@@ -433,6 +435,8 @@ public final class NwjcParser {
 
 				roots.add(new RootObject(name, type));
 			}
+			
+			log.appendMsg("Loaded " + roots.size() + " roots");
 
 			return new RootsStore(roots);
 		} catch (IOException e) {
@@ -463,7 +467,8 @@ public final class NwjcParser {
 			for (final var item : rootsData) {
 				builtins.add(item.getAsString());
 			}
-
+			
+			log.appendMsg("Loaded " + builtins.size() + " builtins");
 			BuiltinsEnum result = new BuiltinsEnum(builtins);
 			mgr.addDataType(result, DataTypeConflictHandler.DEFAULT_HANDLER);
 			return result;
@@ -486,7 +491,7 @@ public final class NwjcParser {
 				
 				items.add(obj.get("Name").getAsString());
 			}
-			
+			log.appendMsg("Loaded " + items.size() + " JS runtimes");
 			JsRuntimesEnum result = new JsRuntimesEnum(items);
 			mgr.addDataType(result, DataTypeConflictHandler.DEFAULT_HANDLER);
 			return result;
@@ -511,7 +516,9 @@ public final class NwjcParser {
 
 	            // Remove the leading 'k'
 	            String funcName = nameAndArgs.get("Name").getAsString();
-	            funcName = funcName.substring(1);
+	            if (funcName.startsWith("k")) {
+	                funcName = funcName.substring(1);
+	            }
 
 	            JsonArray args = nameAndArgs.get("Args").getAsJsonArray();
 	            List<RuntimeFuncArg> funcArgs = new ArrayList<>();
@@ -530,15 +537,17 @@ public final class NwjcParser {
 	            allArgs.add(funcArgs);
 	        }
 	        
-	        // Build the new mapping: for each intrinsic function index i, set magic number = names.size() + i.
+	        
+	        // Build mapping for intrinsic functions: intrinsic index i maps to magic number = runtimeCount + i.
 	        Map<Integer, Integer> newIntrinsicsToRuntimes = new HashMap<>();
 	        int count = names.size();
 	        for (int i = 0; i < count; i++) {
 	            newIntrinsicsToRuntimes.put(i, count + i);
 	        }
 	        
-	        // Create and return the new RuntimesIntrinsicsStore.
-	        return new RuntimesIntrinsicsStore(names, allArgs, newIntrinsicsToRuntimes);
+	        RuntimesIntrinsicsStore result = new RuntimesIntrinsicsStore(names, allArgs, newIntrinsicsToRuntimes);
+	        log.appendMsg("Loaded " + result.getNamesCount() + " names and " + result.getIntrinsicsCount() + " intrinsics");
+	        return result;
 	    } catch (IOException e) {
 	        e.printStackTrace();
 	        log.appendException(e);

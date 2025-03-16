@@ -177,6 +177,7 @@ define pcodeop CreateWithContext;
 define pcodeop CreateMappedArguments;
 define pcodeop CreateUnmappedArguments;
 define pcodeop CreateRestParameter;
+define pcodeop ForInEnumerate;
 define pcodeop ForInPrepare;
 define pcodeop ForInContinue;
 define pcodeop ForInNext;
@@ -193,7 +194,7 @@ dest: rel is kUImm [ rel = inst_start + kUImm; ] {
   export *[ram]:4 rel;
 }
 # destination for JumpLoop
-destloop: rel is kUImm [ rel = inst_next - kUImm; ] {
+destloop: rel is kUImm [ rel = inst_start - kUImm; ] {
   export *[ram]:4 rel;
 }
 
@@ -737,6 +738,10 @@ cache_length: kReg is kReg {export kReg;}
 }
 :SwitchOnSmiNoFeedback [kIdx], [kUImm], [kImm] is op = 0x8f; kIdx; kUImm; kImm {
   SwitchOnSmiNoFeedback(cpool(0:4, inst_start,0, 0:4));
+}
+
+:ForInEnumerate receiver is op = 0x90; receiver {
+    acc = ForInEnumerate(receiver);
 }
 
 :ForInPrepare receiver, triple^rangeDst is op = 0x91; receiver; triple; rangeDst {

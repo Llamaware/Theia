@@ -65,7 +65,7 @@ public final class BytecodeStruct implements IAllocatable {
 		kParameterSizeOffset = kFrameSizeOffset + 4;
 		kIncomingNewTargetOrGeneratorRegisterOffset = kParameterSizeOffset + 4;
 		kInterruptBudgetOffset = kIncomingNewTargetOrGeneratorRegisterOffset + 4;
-		kOSRNestingLevelOffset = kInterruptBudgetOffset + 4;
+		kOSRNestingLevelOffset = kInterruptBudgetOffset + 4; // TODO: offset should be +1 but +1 doesn't seem to work
 		kBytecodeAgeOffset = kOSRNestingLevelOffset + 1;
 		kHeaderSize = kBytecodeAgeOffset + 1 + 2;
 		// end offsets initializing
@@ -125,7 +125,6 @@ public final class BytecodeStruct implements IAllocatable {
 		// convert from dwords to bytes
 		int tmp = obj.getInt(kOSRNestingLevelOffset);
 		osrNestingLevel = (byte)((tmp >> 0) & 0xFF);
-		s.add(ByteDataType.dataType, 1, "OSRNestingLevel", null);
 		
 		// 37
 		bytecodeAge = (byte)((tmp >> 8) & 0xFF);
@@ -140,6 +139,7 @@ public final class BytecodeStruct implements IAllocatable {
 			byte[] bb = ObjectsAllocator.intToBytes(obj.getInt(kHeaderSize + i));
 			out.write(bb);
 		}
+		
 		bytecode = Arrays.copyOf(out.toByteArray(), length);
 		
 		s.add(new PointerDataType(ByteDataType.dataType), -1, "BytecodeData", null);
@@ -249,6 +249,13 @@ public final class BytecodeStruct implements IAllocatable {
 	    sb.append("\n  spt: ").append(spt != null ? spt.toString() : "null");
 	    sb.append("\n  size: ").append(size);
 	    sb.append("\n  kConstantPoolOffset: ").append(kConstantPoolOffset);
+	    sb.append("\n  kHandlerTableOffset: ").append(kHandlerTableOffset);
+	    sb.append("\n  kFrameSizeOffset: ").append(kFrameSizeOffset);
+	    sb.append("\n  kParameterSizeOffset: ").append(kParameterSizeOffset);
+	    sb.append("\n  kInterruptBudgetOffset: ").append(kInterruptBudgetOffset);
+	    sb.append("\n  kOsrNestingLevelOffset: ").append(kOSRNestingLevelOffset);
+	    sb.append("\n  kBytecodeAgeOffset: ").append(kBytecodeAgeOffset);
+	    sb.append("\n  kHeaderSize: ").append(kHeaderSize);
 	    sb.append("\n}");
 	    return sb.toString();
 	}

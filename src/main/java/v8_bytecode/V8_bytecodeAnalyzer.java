@@ -179,7 +179,7 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 				for (int opIndex : CP_FUNCS.get(mnemonic)) {
 					int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
-					log2.appendMsg("mnemonic: " + mnemonic);
+					log2.appendMsg("mnemonic: " + mnemonic + ", index: " + index);
 					switch(mnemonic) {
 						case "CallRuntime":
 						case "InvokeIntrinsic": {
@@ -191,6 +191,8 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							} else {
 								enumName = runsIntrsStore.getIntrinsicName(index);
 							}
+							
+							log2.appendMsg("enumName: " + enumName);
 							
 							switch(enumName) {
 							case "Abort": {

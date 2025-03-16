@@ -105,20 +105,19 @@ public final class HandlerTableStruct implements IAllocatable {
 	@Override
 	public String toString() {
 	    StringBuilder sb = new StringBuilder();
-	    sb.append("HandlerTableStruct { ");
+	    sb.append("HandlerTableStruct\n");
 	    sb.append("count: ").append(count).append(", ");
 	    sb.append("baseAddr: ").append(baseAddr).append(", ");
-	    sb.append("items: \n[");
+	    sb.append("items: \n   from   to       hdlr\n");
 	    for (int i = 0; i < items.size(); i++) {
 	        HandlerTableItemStruct item = items.get(i);
-	        sb.append("{ offset: ").append(item.getOffset());
-	        sb.append(", start: ").append(item.getStartAddress());
-	        sb.append(", end: ").append(item.getEndAddress()).append(" }");
+	        sb.append("  ( ").append(item.getStartAddress());
+	        sb.append(", ").append(item.getEndAddress());
+	        sb.append(")  ->   ").append(item.getOffset());
 	        if (i < items.size() - 1) {
-	            sb.append(", \n");
+	            sb.append("\n");
 	        }
 	    }
-	    sb.append("] }");
 	    return sb.toString();
 	}
 

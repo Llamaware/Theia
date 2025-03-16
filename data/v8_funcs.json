@@ -1,5 +1,273 @@
 [
     {
+        "Name": "_AsyncGeneratorReject",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            },
+            {
+                "Name": "value",
+                "Type": "Node*"
+            }
+        ]
+    },
+    {
+        "Name": "_AsyncGeneratorResolve",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            },
+            {
+                "Name": "value",
+                "Type": "Node*"
+            },
+            {
+                "Name": "done",
+                "Type": "Node*"
+            }
+        ]
+    },
+    {
+        "Name": "_AsyncGeneratorYield",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            },
+            {
+                "Name": "value",
+                "Type": "Node*"
+            },
+            {
+                "Name": "is_caught",
+                "Type": "Node*"
+            }
+        ]
+    },
+    {
+        "Name": "_CreateJSGeneratorObject",
+        "Args": [
+            {
+                "Name": "function",
+                "Type": "JSFunction"
+            },
+            {
+                "Name": "receiver",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_GeneratorGetContext",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            }
+        ]
+    },
+    {
+        "Name": "_GeneratorGetResumeMode",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            }
+        ]
+    },
+    {
+        "Name": "_GeneratorGetInputOrDebugPos",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            }
+        ]
+    },
+    {
+        "Name": "_GeneratorClose",
+        "Args": [
+            {
+                "Name": "generator",
+                "Type": "JSGeneratorObject"
+            }
+        ]
+    },
+    {
+        "Name": "_GetImportMetaObject",
+        "Args": []
+    },
+    {
+        "Name": "_Call",
+        "Args": [
+            {
+                "Name": "target",
+                "Type": "Object"
+            },
+            {
+                "Name": "receiver",
+                "Type": "Object"
+            },
+            {
+                "Name": "..."
+            }
+        ]
+    },
+    {
+        "Name": "_ClassOf",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_CreateIterResultObject",
+        "Args": [
+            {
+                "Name": "value",
+                "Type": "Object"
+            },
+            {
+                "Name": "done",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_CreateAsyncFromSyncIterator",
+        "Args": [
+            {
+                "Name": "sync_iterator",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_HasProperty",
+        "Args": [
+            {
+                "Name": "object",
+                "Type": "Object"
+            },
+            {
+                "Name": "key",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsArray",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsJSMap",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsJSProxy",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsJSReceiver",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsJSSet",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsJSWeakMap",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsJSWeakSet",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsSmi",
+        "Args": [
+            {
+                "Name": "obj",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_IsTypedArray",
+        "Args": [
+            {
+                "Name": "array",
+                "Type": "JSTypedArray"
+            }
+        ]
+    },
+    {
+        "Name": "_ToString",
+        "Args": [
+            {
+                "Name": "input",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_ToLength",
+        "Args": [
+            {
+                "Name": "input",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
+        "Name": "_ToInteger",
+        "Args": [
+            {
+                "Name": "input",
+                "Type": "Object"
+            }
+        ]
+    },
+    {
         "Name": "kLoadLookupSlotForCall",
         "Args": [
             {
@@ -2574,6 +2842,10 @@
             {
                 "Name": "exception",
                 "Type": "Object"
+            },
+            {
+                "Name": "handler",
+                "Type": "Object"
             }
         ]
     },
@@ -2696,7 +2968,12 @@
     },
     {
         "Name": "kThrowSymbolIteratorInvalid",
-        "Args": []
+        "Args": [
+            {
+                "Name": "iterator",
+                "Type": "Object"
+            }
+        ]
     },
     {
         "Name": "kThrowNonCallableInInstanceOfCheck",

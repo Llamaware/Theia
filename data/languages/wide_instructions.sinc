@@ -18,7 +18,7 @@ define token dr_operand(32)
 w_dest: rel is w_kUImm [ rel = inst_start + w_kUImm; ] {
   export *[ram]:4 rel;
 }
-w_destloop: rel is w_kUImm [ rel = inst_next - w_kUImm; ] {
+w_destloop: rel is w_kUImm [ rel = inst_start - w_kUImm + 1; ] {
   export *[ram]:4 rel;
 }
 w_rangeSrc: {  is kReg; w_Pad; w_kUImm  [ offStart = kReg; counter =  w_kUImm;] {range_size = w_kUImm;  export kReg;}

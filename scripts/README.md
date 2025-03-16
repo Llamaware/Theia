@@ -24,4 +24,7 @@
 
 `new_functions.cpp` - generate text file of intrinsic functions
 
-`merge_function_json.py` - use `new_functions.txt` and old `v8_funcs.json` to generate an updated `v8_funcs.json`
+`new_interpreter_intrinsics.cpp` - generate text file of runtime intrinsic functions
+
+`merge_function_json.py` - use `new_functions.txt`, `new_interpreter_intrinsics.txt`, and old `v8_funcs.json` to generate an updated `v8_funcs.json`
+

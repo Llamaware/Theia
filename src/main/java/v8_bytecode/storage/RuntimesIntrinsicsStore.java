@@ -31,9 +31,9 @@ public final class RuntimesIntrinsicsStore implements Serializable {
 		return names.size();
 	}
 	
-	public String getRuntimeName(int index) {
-		return names.get(index);
-	}
+    public String getRuntimeName(int index) {
+        return names.get(index);
+    }
 	
 	public int getIntrinsicsCount() {
 		return intrinsicsToRuntimes.size();

@@ -18,5 +18,5 @@ def display_json_entries(file_path):
         print(f"An unexpected error occurred: {e}")
 
 # Example usage
-file_path = 'v8_jsruns.json'  # Replace with your JSON file path
+file_path = 'new_functions.json'  # Replace with your JSON file path
 display_json_entries(file_path)

@@ -1,5 +1,13 @@
+// This script will probably not disassemble properly.
+
 const FONT_TYPES = [".ttf", ".otf"];
 const LANG_ORDERING = ["english", "korean"];
+
+function basename(path) {
+   return path.split('/').reverse()[0];
+}
+
+const Lang = {};
 
 Lang.search = function () {
   let langDirPath = "/languages/";
@@ -8,7 +16,7 @@ Lang.search = function () {
   for (let folderIndex = 0; folderIndex < 1; folderIndex++) {
     let folderPath = langFolders[folderIndex];
     for (let fontFile of FONT_TYPES) {
-      let fontFileName = Utils.basename(fontFile);
+      let fontFileName = basename(fontFile);
       let fontKey = folderPath;
     }
     for (let fileIndex = 0; fileIndex < 1; fileIndex++) {
@@ -26,3 +34,5 @@ Lang.search = function () {
   for (let officialKey of officialKeys) {
   }
 };
+
+console.log(Lang.search());
