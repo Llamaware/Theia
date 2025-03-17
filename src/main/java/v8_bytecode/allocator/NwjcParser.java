@@ -140,7 +140,8 @@ public final class NwjcParser {
 	        "It's high noon...",
 	        "All according to keikaku.",
 	        "Deploying surprise in 5... 4...",
-	        "Made with love by TsundereGPT~"
+	        "Made with love by TsundereGPT~",
+	        "You are not prepared!"
 	    };
 
 	    Random random = new Random();
@@ -276,14 +277,6 @@ public final class NwjcParser {
 		return allocator;
 	}
 	
-	//public static int smiToInt(long value, int pointerSize) {
-	//	if (pointerSize == 4) {
-	//		return (int)(value >> 1L);
-	//	}
-	//	
-	//	return (int)(value >> 32L);
-	//}
-	
 	public static int smiToInt(long value, int pointerSize) {
 	    if (pointerSize == 4) {
 	        // Standard SMI untagging for 32-bit.
@@ -371,25 +364,21 @@ public final class NwjcParser {
 			log.appendMsg("ht: " + ht.toString());
 			
 			final List<HandlerTableItemStruct> htItems = ht.getItems();
-			for (int j = 0; j < htItems.size(); ++j) { // TODO: Fix this loop, doesn't work
+			for (int j = 0; j < htItems.size(); ++j) {
 			    final HandlerTableItemStruct hti = htItems.get(j);
 			    
-			    // Debug: Log raw values from HandlerTableItemStruct
 			    log.appendMsg("Handler " + j + " - raw offset: " + hti.getOffset());
 			    log.appendMsg("Handler " + j + " - raw start address: " + hti.getStartAddress());
 			    log.appendMsg("Handler " + j + " - raw end address: " + hti.getEndAddress());
 			    
-			    // Compute addresses relative to bcodeAddr
 			    Address offsetAddr = bcodeAddr.add(hti.getOffset());
 			    Address startAddr  = bcodeAddr.add(hti.getStartAddress());
 			    Address endAddr    = bcodeAddr.add(hti.getEndAddress());
 			    
-			    // Debug: Log computed addresses
 			    log.appendMsg("Handler " + j + " - computed offset address: " + offsetAddr);
 			    log.appendMsg("Handler " + j + " - computed start address: " + startAddr);
 			    log.appendMsg("Handler " + j + " - computed end address: " + endAddr);
 			    
-			    // Add addresses for disassembly
 			    doDisasm.add(offsetAddr);
 			    doDisasm.add(startAddr);
 			    doDisasm.add(endAddr);
@@ -401,7 +390,6 @@ public final class NwjcParser {
 			    // Create label for the handler
 			    fpa.createLabel(offsetAddr, String.format("%s_handler_%d", sf.getName(), j), true, SourceType.USER_DEFINED);
 			    
-			    // Extra debug to confirm labels/comments are set
 			    log.appendMsg("Set label and comments for handler " + j);
 			}
 
@@ -412,9 +400,7 @@ public final class NwjcParser {
 		for (final Address dis : doDisasm) {
 			log.appendMsg("Disassembling: " + dis);
 			monitor.setMessage("Disassembling: " + dis); // for debug breakpoint
-			//ObjectsAllocator.disassemble(program, monitor, dis);
 		    try {
-		        //log.appendMsg("Disassembling: " + dis);
 		        ObjectsAllocator.disassemble(program, monitor, dis);
 		    } catch (Exception e) {
 		        log.appendMsg("Skipping disassembly at " + dis + ": " + e.getMessage());
@@ -620,11 +606,6 @@ public final class NwjcParser {
 	            return; // End of data, exit the loop
 	        }
 			int b = reader.readNextByte() & 0xFF;
-			
-	        //if (b == 0x18) {
-	        	//log.appendMsg("kSynchronize in readData, stopping");
-	        //    throw new IOException("kSynchronize in readData, stopping");
-	        //}
 	        
 			long result = doAllSpaces(insertOff, b, object, AllocWhere.kNewObject, AllocHow.kPlain, AllocPoint.kStartOfObject, depth);
 
@@ -756,15 +737,6 @@ public final class NwjcParser {
 				//throw new IOException("Unimplemented opcode: 0x18");
 				// TODO: implement
 				log.appendMsg("kSynchronize opcode 0x18 encountered at: " + reader.getPointerIndex() + ", insertOff=" + insertOff);
-			    // Manually log the stack trace
-			    //StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-			    //StringBuilder sb = new StringBuilder("This should not happen. Stack trace:\n");
-			    //for (StackTraceElement element : stackTrace) {
-			    //    sb.append(element.toString()).append("\n");
-			    //}
-			    //log.appendMsg(sb.toString());
-			    //throw new IOException("kSynchronize in readData, stopping");
-
 			    return;
 			case 0x1B: { // kVariableRawData
 				long sizeInBytes = readInt();

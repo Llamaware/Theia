@@ -90,7 +90,7 @@ public V8_InjectCallVariadic(String sourceName, SleighLanguage language, long un
 		}
 		// writing locals into aX registers to avoid mixing up arguments
 		argIndex = opObjects.length;
-		for (Object o: opObjects) {
+		for (int i = 0; i < opObjects.length; i++) {
 			argIndex--;
 			String invokeTmp = "invoke_tmp_" + "a" + argIndex;
 			pCode.emitAssignVarnodeFromVarnode("a" + argIndex, invokeTmp, 4);

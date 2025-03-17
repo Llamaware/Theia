@@ -59,7 +59,7 @@ public class V8_InjectCallJSRuntime extends V8_InjectPayload {
 		}
 		// writing locals into aX registers to avoid mixing up arguments
 		argIndex = opObjects.length;
-		for (Object o: opObjects) {
+		for (int i = 0; i < opObjects.length; i++) {
 			argIndex--;
 			String invokeTmp = "invoke_tmp_" + "a" + argIndex;
 			pCode.emitAssignVarnodeFromVarnode("a" + argIndex, invokeTmp, 4);

@@ -65,7 +65,7 @@ public class V8_InjectJSCallN extends V8_InjectPayload {
 		}
 		// writing locals into aX registers to avoid mixing up arguments
 		argIndex = opObjects.length;
-		for (Object o : opObjects) {
+		for (int i = 0; i < opObjects.length; i++) {
 			argIndex--;
 			//Register currentOp = (Register) o;
 			String invokeTmp = "invoke_tmp_" + "a" + argIndex;
