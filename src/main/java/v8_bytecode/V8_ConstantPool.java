@@ -160,7 +160,7 @@ public class V8_ConstantPool extends ConstantPool {
 		} break;
 		}
 		String currentDirectory = System.getProperty("user.dir");
-		log.writeToFile(currentDirectory + "\\cpool.log");
+		log.writeToFile(currentDirectory + "\\Theia\\cpool.log");
 		return res;
 	}
 }

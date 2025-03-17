@@ -41,7 +41,7 @@ import v8_bytecode.allocator.NwjcParser;
  */
 public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 	private static final long INSTANCE_SIZE = 0x3D2L;
-	static final String LDR_NAME = "Nwjc (.bin) Loader";
+	static final String LDR_NAME = "NWBin (.bin) Loader";
 	private NwjcParser parser = null;
 
 	@Override
@@ -81,7 +81,8 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 		BinaryReader reader = new BinaryReader(provider, true);
 		
 		MessageLog2 log2 = new MessageLog2();
-		log.appendMsg("Nwjc loader initialized.");
+		log.appendMsg("Welcome to Theia - v0.3 \"Debug Build\"");
+		log.appendMsg("NWBin loader initialized.");
 		
 		try {
 			final String descr = program.getLanguage().getLanguageDescription().getVariant();
@@ -90,14 +91,14 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 			parser.parse();
 			parser.postAllocate();
 			String currentDirectory = System.getProperty("user.dir");
-			log2.writeToFile(currentDirectory + "\\loader.log");
-			log.appendMsg("Load complete. Debug log written to " + currentDirectory + "\\loader.log");
+			log2.writeToFile(currentDirectory + "\\Theia\\loader.log");
+			log.appendMsg("Load complete.\nDebug log written to " + currentDirectory + "\\loader.log");
 		} catch (Exception e) {
 			e.printStackTrace();
 			log2.appendException(e);
 			String currentDirectory = System.getProperty("user.dir");
-			log2.writeToFile(currentDirectory + "\\loader.log");
-			log.appendMsg("An error occurred. Debug log written to " + currentDirectory + "\\loader.log");
+			log2.writeToFile(currentDirectory + "\\Theia\\loader.log");
+			log.appendMsg("An error occurred.\nDebug log written to " + currentDirectory + "\\loader.log");
 		}
 	}
 }

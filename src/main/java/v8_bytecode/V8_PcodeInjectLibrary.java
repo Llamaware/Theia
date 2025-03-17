@@ -48,7 +48,7 @@ public class V8_PcodeInjectLibrary extends PcodeInjectLibrary {
 		
 		log.appendMsg("implementedOps: " + implementedOps);
 		String currentDirectory = System.getProperty("user.dir");
-		log.writeToFile(currentDirectory + "\\pcode.log");
+		log.writeToFile(currentDirectory + "\\Theia\\pcode.log");
 	}
 	
     public V8_PcodeInjectLibrary(V8_PcodeInjectLibrary op2) {
@@ -62,7 +62,7 @@ public class V8_PcodeInjectLibrary extends PcodeInjectLibrary {
 	public ConstantPool getConstantPool(Program program) throws IOException {
 		log.appendMsg("returning new V8_ConstantPool");
 		String currentDirectory = System.getProperty("user.dir");
-		log.writeToFile(currentDirectory + "\\pcode.log");
+		log.writeToFile(currentDirectory + "\\Theia\\pcode.log");
 		return new V8_ConstantPool(program);
 	}
 	
@@ -79,7 +79,7 @@ public class V8_PcodeInjectLibrary extends PcodeInjectLibrary {
 	public InjectPayload getPayload(int type, String name) {
 		log.appendMsg("getPayload: " + name);
 		String currentDirectory = System.getProperty("user.dir");
-		log.writeToFile(currentDirectory + "\\pcode.log");
+		log.writeToFile(currentDirectory + "\\Theia\\pcode.log");
 		if (type == InjectPayload.CALLMECHANISM_TYPE) {
 			return null;
 		}
