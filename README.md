@@ -1,10 +1,12 @@
 # Theia
 
+### [CLICK HERE to view the full documentation](https://llamawa.re/Theia/)
+
 ## Description
 
-GHIDRA plugin to parse, disassemble, and decompile nwjc (.bin) binaries. For Ghidra v11.3.1.
+GHIDRA plugin to parse, disassemble, and decompile NW.js compiled (.bin) binaries. For Ghidra v11.3.1.
 
-## Supported nw.js versions:
+## Supported NW.js versions:
 - v0.29.0 (x86) (node.js version: 9.7.1 / V8 version: 6.5.254.31)
 
 ## Build instructions
