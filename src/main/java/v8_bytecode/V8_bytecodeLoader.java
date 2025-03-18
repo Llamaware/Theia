@@ -42,16 +42,11 @@ import v8_bytecode.allocator.NwjcParser;
 public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 	private static final long INSTANCE_SIZE = 0x3D2L;
 	static final String LDR_NAME = "NWBin (.bin) Loader";
-	static final String BUILD_NAME = "v0.3 \"Down the Rabbit Hole\"";
 	private NwjcParser parser = null;
 
 	@Override
 	public String getName() {
 		return LDR_NAME;
-	}
-	
-	public static String buildName() {
-		return BUILD_NAME;
 	}
 
 	@Override
@@ -83,7 +78,7 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 		BinaryReader reader = new BinaryReader(provider, true);
 		
 		MessageLog2 log2 = new MessageLog2();
-		log.appendMsg("Welcome to Theia - " + buildName());
+		log.appendMsg("Welcome to Theia - " + LogWriter.buildName());
 		log.appendMsg("I've initialized the loader.");
 		
 		try {
