@@ -34,8 +34,6 @@ import ghidra.program.model.lang.LanguageCompilerSpecPair;
 import ghidra.framework.options.Options;
 import v8_bytecode.allocator.NwjcParser;
 
-//import v8_bytecode.MessageLog2;
-
 /**
  * Provide class-level documentation that describes what this loader does.
  */
