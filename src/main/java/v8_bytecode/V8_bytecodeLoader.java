@@ -15,7 +15,6 @@
  */
 package v8_bytecode;
 
-import java.util.Date;
 import java.io.IOException;
 import java.util.*;
 
@@ -43,7 +42,7 @@ import v8_bytecode.allocator.NwjcParser;
 public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 	private static final long INSTANCE_SIZE = 0x3D2L;
 	static final String LDR_NAME = "NWBin (.bin) Loader";
-	static final String BUILD_NAME = "v0.3 \"Debug Build\"";
+	static final String BUILD_NAME = "v0.3 \"Down the Rabbit Hole\"";
 	private NwjcParser parser = null;
 
 	@Override
