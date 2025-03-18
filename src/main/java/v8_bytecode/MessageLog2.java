@@ -40,7 +40,7 @@ public class MessageLog2 {
 	/**
 	 * The default number of messages to store before clipping
 	 */
-	private final static int MAX_COUNT = 100000;
+	private final static int MAX_COUNT = 50000;
 
 	private List<String> messages = new ArrayList<>();
 	private int maxSize = MAX_COUNT;
@@ -201,5 +201,25 @@ public class MessageLog2 {
 	    } catch (IOException e) {
 	        Msg.error(this.getClass(), "Failed to write log to file: " + filePath, e);
 	    }
+	}
+	
+	public void prependMsg(String msg) {
+		if (StringUtils.isBlank(msg)) {
+			return;
+		}
+		messages.add(0, msg);
+	}
+	
+	public String getFirstMsg() {
+		if (messages.size() > 0) {
+			return messages.get(0);
+		}
+		return "No message to get";
+	}
+	
+	public void deleteFirstMsg() {
+		if (messages.size() > 0) {
+			messages.remove(0);
+		}
 	}
 }

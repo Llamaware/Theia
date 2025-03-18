@@ -558,7 +558,6 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 			funcsStorage.store(program);
 		}
 		
-		String currentDirectory = System.getProperty("user.dir");
-		log2.writeToFile(currentDirectory + "\\Theia\\analyzer.log");
+		LogWriter.writeLog(log2, "analyzer.log");
 	}
 }

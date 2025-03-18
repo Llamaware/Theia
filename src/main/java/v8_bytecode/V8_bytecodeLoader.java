@@ -15,6 +15,7 @@
  */
 package v8_bytecode;
 
+import java.util.Date;
 import java.io.IOException;
 import java.util.*;
 
@@ -42,14 +43,16 @@ import v8_bytecode.allocator.NwjcParser;
 public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 	private static final long INSTANCE_SIZE = 0x3D2L;
 	static final String LDR_NAME = "NWBin (.bin) Loader";
+	static final String BUILD_NAME = "v0.3 \"Debug Build\"";
 	private NwjcParser parser = null;
 
 	@Override
 	public String getName() {
-
-		// Name the loader.  This name must match the name of the loader in the .opinion files.
-
 		return LDR_NAME;
+	}
+	
+	public static String buildName() {
+		return BUILD_NAME;
 	}
 
 	@Override
@@ -63,7 +66,7 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 
 		long magic = reader.readNextUnsignedInt();
 
-		if (magic == (0xC0DE0000L ^ INSTANCE_SIZE)) {
+		if (magic == (0xC0DE0000L ^ INSTANCE_SIZE)) { // only supports x32 right now
 			loadSpecs.add(new LoadSpec(this, ObjectsAllocator.CODE_BASE, new LanguageCompilerSpecPair("V8:LE:32:default", "default"), true));
 		}
 
@@ -81,8 +84,8 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 		BinaryReader reader = new BinaryReader(provider, true);
 		
 		MessageLog2 log2 = new MessageLog2();
-		log.appendMsg("Welcome to Theia - v0.3 \"Debug Build\"");
-		log.appendMsg("NWBin loader initialized.");
+		log.appendMsg("Welcome to Theia - " + buildName());
+		log.appendMsg("I've initialized the loader.");
 		
 		try {
 			final String descr = program.getLanguage().getLanguageDescription().getVariant();
@@ -90,15 +93,15 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 			parser = new NwjcParser(reader, descr.equalsIgnoreCase("x32"), program, monitor, log2);
 			parser.parse();
 			parser.postAllocate();
-			String currentDirectory = System.getProperty("user.dir");
-			log2.writeToFile(currentDirectory + "\\Theia\\loader.log");
-			log.appendMsg("Load complete.\nDebug log written to " + currentDirectory + "\\loader.log");
+			String logResult = LogWriter.writeLog(log2, "loader.log");
+			log.appendMsg("Load complete, everything okay!\nDebug log written to:\n" + logResult);
 		} catch (Exception e) {
 			e.printStackTrace();
 			log2.appendException(e);
-			String currentDirectory = System.getProperty("user.dir");
-			log2.writeToFile(currentDirectory + "\\Theia\\loader.log");
-			log.appendMsg("An error occurred.\nDebug log written to " + currentDirectory + "\\loader.log");
+			String logResult = LogWriter.writeLog(log2, "loader.log");
+			log.appendMsg("Something went wrong!");
+			log.appendMsg(e.getMessage());
+			log.appendMsg("Debug log written to:\n" + logResult);
 		}
 	}
 }
