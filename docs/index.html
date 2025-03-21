@@ -5,71 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://llamawa.re/Theia">
-    <meta property="og:title" content="Theia - NWBin Decompiler">
+    <meta property="og:title" content="Theia">
     <meta property="og:description" content="The ultimate Ghidra plugin deluxe version.">
-    <title>Theia - NWBin Decompiler</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        header {
-            background-color: #222;
-            color: #fff;
-            padding: 20px;
-            text-align: center;
-            font-size: 2em;
-        }
-        .container {
-            width: 90%;
-            max-width: 1000px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h2 {
-            border-bottom: 2px solid #eee;
-            padding-bottom: 5px;
-            margin-bottom: 20px;
-        }
-        blockquote {
-            font-style: italic;
-            background-color: #f9f9f9;
-            border-left: 4px solid #ccc;
-            margin: 20px 0;
-            padding: 10px 20px;
-            color: #555;
-        }
-        img {
-            max-width: 1000px;
-            object-fit: cover;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-        pre, code {
-            background-color: #f4f4f4;
-            padding: 10px;
-            overflow-x: auto;
-            display: block;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-    </style>
+    <title>Theia</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>Theia - NWBin Decompiler</header>
-
     <div class="container">
+        <img src="logo.png" alt="Theia Logo" class="center"> 
+        <div class="tagline"><p>NWBin Reverse Engineering Plugin for Ghidra</p></div>
         <h2>Overview</h2>
         <blockquote>"I'm an intellectual rapist who enjoys exposing things people try to hide. Got it?" — Furudo Erika</blockquote>
-        <p><a href="https://github.com/Llamaware/Theia">Theia</a> is a Ghidra plugin that allows you to parse, disassemble, and decompile NW.js compiled (.bin) binaries. Based on the ghidra_nodejs plugin, Theia extends support to NWBin files, which are used to protect JavaScript source code in NW.js applications.</p>
+        <p>Theia (Θεία) is a Ghidra plugin that allows you to parse, disassemble, and decompile NW.js compiled (.bin) binaries. Based on the ghidra_nodejs plugin, Theia extends support to NWBin files, which are used to protect JavaScript source code in NW.js applications.</p>
         <p>Theia makes it possible for reverse engineers and researchers to recover lost or obfuscated source code, analyze program behavior, and bypass encryption schemes. Built as a labor of love, Theia is our final answer to the numerous challenges posed by the V8 interpreter.</p>
+        <p><a href="https://github.com/Llamaware/Theia">View Theia's source code here.</a></p>
         <img src="overview.png" alt="Overview Image" />
 
         <h2>Installation</h2>
@@ -105,7 +54,7 @@
             <li>Analyzer - applied after the loader. Arranges the cross-references, removes stub code that the compiler has generated (simplifies analysis), and tracks codeflow.</li>
             <li>Disassembler/Decompiler - Thanks to the technologies implemented in Ghidra, when you write the disassembler, you get a decompiler at the same time, which is really convenient. To do this, Ghidra’s internal language SLEIGH is used.</li>
             <li>PCode Injector - The injector draws up an intermediate representation for the decompiler when this is hard to achieve or even impossible using SLEIGH.</li>
-            <li>Scripts - Includes some helpful Ghidra scripts to aid in decompilation!</li>
+            <li>Scripts - Includes some helpful Ghidra scripts to aid in decompilation.</li>
         </ul>
 
         <h2>Technical Details</h2>
@@ -131,7 +80,7 @@
         <p>Similarly, the developers of the RPG Maker MV/MZ Cook Tool claim:</p>
         <blockquote>"It allows RPG Maker MV and MZ game developers to protect the game's source code and plugins from being stolen by compiling the files to their binary form."</blockquote>
         <p>We find these claims to be dubious, to say the least. Relying on such tools to protect one's source code provides little more than a false sense of security. Compiling to native code or binary form may raise the bar for casual attempts at reverse engineering, but ultimately amounts to nothing more than security through obscurity. Given the tools and expertise available today, reversing such "protections" is often just a matter of time and effort.</p>
-        </p>Anything that can be compiled can be decompiled, and anything that can be executed can be analyzed. To believe otherwise is to indulge in an illusion — and the harsh truth of reverse engineering is that <a href="https://www.youtube.com/watch?v=jOyfZex7B3E">no locked room remains closed forever</a>.</p>
+        <p>Anything that can be compiled can be decompiled, and anything that can be executed can be analyzed. To believe otherwise is to indulge in an illusion — and the harsh truth of reverse engineering is that <a href="https://www.youtube.com/watch?v=jOyfZex7B3E">no locked room remains closed forever</a>.</p>
         
         <h2>Legal Stuff</h2>
         <blockquote>"Legends are a thing of the past. I am a von Karma. That is all." — Franziska von Karma</blockquote>

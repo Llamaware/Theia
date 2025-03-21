@@ -4,7 +4,7 @@
 
 ## Description
 
-GHIDRA plugin to parse, disassemble, and decompile NW.js compiled (.bin) binaries. For Ghidra v11.3.1.
+Ghidra plugin to parse, disassemble, and decompile NW.js compiled (.bin) binaries. For Ghidra v11.3.1.
 
 ## Supported NW.js versions:
 - v0.29.0 (x86) (node.js version: 9.7.1 / V8 version: 6.5.254.31)
