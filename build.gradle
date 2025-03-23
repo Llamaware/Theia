@@ -67,3 +67,4 @@ dependencies {
 
 buildExtension.exclude 'samples/**'
 buildExtension.exclude 'docs/**'
+buildExtension.exclude 'scripts/**'
