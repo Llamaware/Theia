@@ -64,3 +64,6 @@ dependencies {
 
 // Exclude additional files from the built extension
 // Ex: buildExtension.exclude '.idea/**'
+
+buildExtension.exclude 'samples/**'
+buildExtension.exclude 'docs/**'

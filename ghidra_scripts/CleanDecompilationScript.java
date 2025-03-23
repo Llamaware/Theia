@@ -1,3 +1,5 @@
+//Print selected function to console in a more legible format.
+// @author Llamaware
 // @category Analysis
 import ghidra.app.decompiler.DecompInterface;
 import ghidra.app.decompiler.DecompileResults;
@@ -11,14 +13,12 @@ public class CleanDecompilationScript extends GhidraScript {
         DecompInterface decompInterface = new DecompInterface();
         decompInterface.openProgram(currentProgram);
         
-        for (Function func : currentProgram.getFunctionManager().getFunctions(true)) {
+        try {
+            Function func = currentProgram.getFunctionManager().getFunctionContaining(currentAddress);
+        	
             println("Processing function: " + func.getName());
             
-            DecompileResults results = decompInterface.decompileFunction(func, 60, monitor);
-            if (!results.decompileCompleted()) {
-                println("Decompilation failed for " + func.getName());
-                continue;
-            }
+            DecompileResults results = decompInterface.decompileFunction(func, 30, monitor);
             
             String decompiledCode = results.getDecompiledFunction().getC();
             
@@ -34,20 +34,22 @@ public class CleanDecompilationScript extends GhidraScript {
                 "$1$2[$3]"
             );
             
-            // Similarly, do the same for LdaNamedProperty if needed.
+            // Handle LdaNamedProperty calls, now with an optional cast (e.g. (code *))
+            // For literal property names (using dot notation)
             cleanedCode = cleanedCode.replaceAll(
-                "(\\w+\\s*=\\s*)LdaNamedProperty\\s*\\(\\s*(\\w+)\\s*,\\s*\"([^\"]+)\"\\s*\\)",
-                "$1$2.$3"
+                "(\\w+\\s*=\\s*)(\\([^)]*\\)\\s*)?LdaNamedProperty\\s*\\(\\s*(\\w+)\\s*,\\s*\"([^\"]+)\"\\s*\\)",
+                "$1$3.$4"
             );
+            // For variable property names (using bracket notation)
             cleanedCode = cleanedCode.replaceAll(
-                "(\\w+\\s*=\\s*)LdaNamedProperty\\s*\\(\\s*(\\w+)\\s*,\\s*([a-zA-Z_][\\w]*)\\s*\\)",
-                "$1$2[$3]"
+                "(\\w+\\s*=\\s*)(\\([^)]*\\)\\s*)?LdaNamedProperty\\s*\\(\\s*(\\w+)\\s*,\\s*([a-zA-Z_][\\w]*)\\s*\\)",
+                "$1$3[$4]"
             );
             
             println("Cleaned decompilation for function: " + func.getName());
             println(cleanedCode);
-        }
-        
-        decompInterface.dispose();
+        } finally {
+			decompInterface.dispose();
+		}
     }
 }

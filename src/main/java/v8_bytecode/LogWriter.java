@@ -4,7 +4,7 @@ import java.util.Date;
 
 public class LogWriter {
 	
-	static final String BUILD_NAME = "v0.3 \"Down the Rabbit Hole\"";
+	static final String BUILD_NAME = "v0.4 \"Ghost in the PCode\"";
 	
 	public static String buildName() {
 		return BUILD_NAME;

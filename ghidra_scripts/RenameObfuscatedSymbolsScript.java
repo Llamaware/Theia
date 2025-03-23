@@ -1,3 +1,5 @@
+//Rename symbols with names obfuscated by obfuscator.io.
+// @author Llamaware
 // @category Analysis
 import ghidra.app.script.GhidraScript;
 import ghidra.program.model.listing.*;
