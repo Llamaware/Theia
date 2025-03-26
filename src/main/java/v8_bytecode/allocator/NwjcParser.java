@@ -132,7 +132,7 @@ public final class NwjcParser {
 	    String[] messages = {
 	        "Reticulating splines...",
 	        "Constructing additional pylons...",
-	        "It’s dangerous to go alone! Take this.",
+	        "It's dangerous to go alone! Take this.",
 	        "All your base are belong to us.",
 	        "Finish him!",
 	        "Do a barrel roll!",
@@ -141,7 +141,23 @@ public final class NwjcParser {
 	        "All according to keikaku.",
 	        "Deploying surprise in 5... 4...",
 	        "Made with love by TsundereGPT~",
-	        "You are not prepared!"
+	        "You are not prepared!",
+	        "admin he doing it sideways",
+	        "<VERY GOOD>",
+	        "Never say never, Andrew my dear!",
+	        "This is this, and that is that.",
+	        "Eat me!",
+	        "Keygen me!",
+	        "In America!",
+	        "7 GRAND DAD",
+	        "I only upload high quality rips.",
+	        "Delightfully devilish, Seymour!",
+	        "Must've been unconscious for a while...",
+	        "Fate Changed!",
+	        "Pentakill!",
+	        "Without love, it cannot be seen.",
+	        "Mememto mori if the nineth lion ate the sun.",
+	        "Thank you for reading the source code <3"
 	    };
 
 	    Random random = new Random();

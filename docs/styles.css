@@ -72,3 +72,13 @@ a:active {
   text-align: center;
   font-size: 20px;
 }
+
+footer {
+    color: #fff;
+    text-align: center;
+}
+
+footer a {
+    color: #fff;
+    text-decoration: none;
+}
