@@ -162,6 +162,12 @@ public final class FuncsStorage extends PrivateSaveable {
 		return found;
 	}
 	
+	/** @return the entry offset of the function whose bytecode contains {@code addr}, or -1 */
+	public long getFunctionOffset(final Address addr) {
+		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
+		return (sharedFunc != null) ? sharedFunc.getAddress() : -1;
+	}
+
 	public ScopeInfoStore getScopeInfo(final Address addr, final String reg) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
 		return (sharedFunc != null) ? sharedFunc.getScopeInfo(reg) : null;
@@ -188,7 +194,7 @@ public final class FuncsStorage extends PrivateSaveable {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
 		if (sharedFunc != null) {
 			final ConstantPoolStore cp = sharedFunc.getConstantPool();
-			return cp.getConstItem(index);
+			return (cp != null) ? cp.getConstItem(index) : null;
 		}
 		return null;
 	}
@@ -197,7 +203,7 @@ public final class FuncsStorage extends PrivateSaveable {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
 		if (sharedFunc != null) {
 			final ConstantPoolStore cp = sharedFunc.getConstantPool();
-			return cp.getConstItemAddress(index);
+			return (cp != null) ? cp.getConstItemAddress(index) : -1;
 		}
 		return -1;
 	}

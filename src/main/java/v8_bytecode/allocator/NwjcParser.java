@@ -26,6 +26,12 @@ import ghidra.program.model.data.DataTypeConflictHandler;
 import ghidra.program.model.data.DataTypeManager;
 import ghidra.program.model.data.Enum;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.address.AddressSet;
+import ghidra.program.disassemble.Disassembler;
+import java.math.BigInteger;
+import ghidra.program.model.lang.Register;
+import ghidra.program.model.listing.ContextChangeException;
+import ghidra.program.model.listing.ProgramContext;
 import ghidra.program.model.mem.MemoryBlockException;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.util.exception.NotFoundException;
@@ -356,6 +362,7 @@ public final class NwjcParser {
 		FlatProgramAPI fpa = new FlatProgramAPI(program);
 		
 		final List<Address> doDisasm = new ArrayList<>();
+		final List<Address[]> tryRegions = new ArrayList<>();
 		
 		for (int i = 0; i < sfCount; ++i) {
 			log.appendMsg("loop: " + i);
@@ -428,6 +435,7 @@ public final class NwjcParser {
 			    
 			    // Create label for the handler
 			    fpa.createLabel(offsetAddr, String.format("%s_handler_%d", sf.getName(), j), true, SourceType.USER_DEFINED);
+			    tryRegions.add(new Address[] { startAddr, offsetAddr, endAddr });
 			    
 			    log.appendMsg("Set label and comments for handler " + j);
 			}
@@ -446,7 +454,43 @@ public final class NwjcParser {
 		        log.appendException(e);
 		    }
 		}
+		markTryRegions(tryRegions);
 	}
+	
+	/**
+	 * Marks the first instruction of each try region with the tryBegin/handlerOff context fields,
+	 * so the try wrapper in v8.slaspec gives it a branch to the handler. Regions sharing a start
+	 * use the innermost (shortest) one. Disassembly that flows into an address resets noflow context,
+	 * so each marked instruction is disassembled again on its own, which honours the stored value.
+	 */
+	private void markTryRegions(final List<Address[]> regions) {
+		final Map<Address, Address[]> innermost = new HashMap<>();
+		for (final Address[] r : regions) {
+			final Address[] old = innermost.get(r[0]);
+			if (old == null || r[2].subtract(r[0]) < old[2].subtract(old[0])) {
+				innermost.put(r[0], r);
+			}
+		}
+		final ProgramContext context = program.getProgramContext();
+		final Register begin = context.getRegister("tryBegin");
+		final Register offset = context.getRegister("handlerOff");
+		for (final Address[] r : innermost.values()) {
+			final long delta = r[1].subtract(r[0]);
+			if (delta <= 0 || delta >= (1L << 20)) {
+				log.appendMsg("Handler at " + r[1] + " out of reach of the try region at " + r[0]);
+				continue;
+			}
+			try {
+				program.getListing().clearCodeUnits(r[0], r[0], false);
+				context.setValue(begin, r[0], r[0], BigInteger.ONE);
+				context.setValue(offset, r[0], r[0], BigInteger.valueOf(delta));
+				Disassembler.getDisassembler(program, monitor, null).disassemble(r[0], new AddressSet(r[0]), false);
+			} catch (ContextChangeException e) {
+				log.appendException(e);
+			}
+		}
+	}
+	
 	
 	private RootsStore loadRoots() {
 		try {

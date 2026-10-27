@@ -38,6 +38,7 @@ import ghidra.util.task.TaskMonitor;
 import v8_bytecode.EnumsStorage;
 import v8_bytecode.ReservObject;
 import v8_bytecode.RootObject;
+import v8_bytecode.RootStrings;
 import v8_bytecode.enums.EnumDataTypes;
 import v8_bytecode.storage.SharedFunctionStore;
 import v8_bytecode.storage.FuncsStorage;
@@ -443,7 +444,7 @@ public final class ObjectsAllocator {
 		} else if (obj instanceof String) {
 			return (String) obj;
 		} else if (obj instanceof RootObject) {
-			return ((RootObject) obj).getName();
+			return RootStrings.jsName((RootObject) obj);
 		} else if (!(obj instanceof ReservObject)) {
 			throw new Exception("Not a string object: " + obj.getClass().getName());
 		}

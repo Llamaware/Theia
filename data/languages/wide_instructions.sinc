@@ -15,6 +15,8 @@ define token dr_operand(32)
 	w_kRuntimeId = (0,31)
 ;
 
+with : tryBegin=0 {
+
 w_dest: rel is w_kUImm [ rel = inst_start + 1 + w_kUImm; ] {
   export *[ram]:4 rel;
 }
@@ -63,8 +65,7 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	acc = False;
 }
 :LdaConstant.Wide [w_kIdx] is wide = 0; op = 0x9; w_kIdx {
-	cp:8 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
-	acc = GetConstant(cp);
+	acc = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
 }
 
 :LdaGlobal.Wide [w_kIdx], [w_kIdx_2] is wide = 0; op = 0xa; w_kIdx; w_kIdx_2 {
@@ -143,7 +144,7 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	acc = LdaNamedProperty(w_object, cp);
 }
 :LdaKeyedProperty.Wide w_object, [w_kIdx] is wide = 0; op = 0x20; w_object; w_kIdx {
-	acc = LdaKeyedProperty(_context, w_object, acc);
+	acc = LdaKeyedProperty(w_object, acc);
 }
 :LdaModuleVariable.Wide [w_kImm], [w_kUImm] is wide = 0; op = 0x21; w_kImm; w_kUImm {
 	acc = LdaModuleVariable(w_kImm:4, w_kUImm:4);
@@ -153,17 +154,14 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 }
 :StaNamedProperty.Wide w_object, [w_kIdx], [w_kIdx_2] is wide = 0; op = 0x23; w_object; w_kIdx; w_kIdx_2 {
 	cp:4 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
- 	val:4 = GetNamedProperty(w_object, cp);
-	StaNamedProperty(_context, val, acc, 1:4);
+	StaNamedProperty(w_object, cp, acc);
 }
 :StaNamedOwnProperty.Wide w_object, [w_kIdx], [w_kIdx_2] is wide = 0; op = 0x24; w_object; w_kIdx; w_kIdx_2 {
 	cp:4 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
-	val:4 = GetNamedProperty(w_object, cp);
-	StaNamedProperty(_context, val, acc, 2:4);
+	StaNamedOwnProperty(w_object, cp, acc);
 }
 :StaKeyedProperty.Wide w_object, w_key, [w_kIdx] is wide = 0; op = 0x25; w_object; w_key; w_kIdx {
-	val:4 = GetKeyedProperty(w_object, w_key);
-	StaKeyedProperty(_context, val, acc, 1:4);
+	StaKeyedProperty(w_object, w_key, acc);
 }
 :StaDataPropertyInLiteral.Wide w_object, w_name, kFlag8, [w_kIdx] is wide = 0; op = 0x26; w_object; w_name; kFlag8; w_kIdx {
 	StaDataPropertyInLiteralCallOther();
@@ -244,10 +242,11 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	acc = acc - 1;
 }
 :ToBooleanLogicalNot.Wide is wide = 0; op = 0x44 {
-	acc= ~(ToBoolean(acc));
+	tb:4 = ToBoolean(acc);
+	acc = LogicalNot(tb);
 }
 :LogicalNot.Wide is wide = 0; op = 0x45 {
-	acc= ~(acc);
+	acc = LogicalNot(acc);
 }
 :TypeOf.Wide is wide = 0; op = 0x46 {
 	acc = TypeOf(acc);
@@ -312,71 +311,85 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :ConstructWithSpread.Wide w_constructor, w_rangeSrc^rangeDst, [w_kIdx] is wide = 0; op = 0x59; w_constructor; w_rangeSrc; rangeDst; w_kIdx {
 	acc = ConstructWithSpread(w_constructor:4, w_rangeSrc:4, range_size);
 }
-:TestEqual.Wide w_src, [w_kIdx] is wide = 0; op = 0x5a; w_src; w_kIdx {
-	if (w_src == acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestEqual.Wide w_src, [w_kIdx] is wide = 0; op = 0x5a; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = TestEqual(w_src, acc);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestEqualStrict.Wide w_src, [w_kIdx] is wide = 0; op = 0x5b; w_src; w_kIdx {
-	acc = TestEqualStrict(acc,w_src);
+:TestEqualStrict.Wide w_src, [w_kIdx] is wide = 0; op = 0x5b; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = w_src == acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestLessThan.Wide w_src, [w_kIdx] is wide = 0; op = 0x5c; w_src; w_kIdx {
-	if (w_src s< acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestLessThan.Wide w_src, [w_kIdx] is wide = 0; op = 0x5c; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = w_src s< acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestGreaterThan.Wide w_src, [w_kIdx] is wide = 0; op = 0x5d; w_src; w_kIdx {
-	if (w_src s> acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestGreaterThan.Wide w_src, [w_kIdx] is wide = 0; op = 0x5d; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = w_src s> acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestLessThanOrEqual.Wide w_src, [w_kIdx] is wide = 0; op = 0x5e; w_src; w_kIdx {
-	if (w_src s<= acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestLessThanOrEqual.Wide w_src, [w_kIdx] is wide = 0; op = 0x5e; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = w_src s<= acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestGreaterThanOrEqual.Wide w_src, [w_kIdx] is wide = 0; op = 0x5f; w_src; w_kIdx {
-	if (w_src s>= acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestGreaterThanOrEqual.Wide w_src, [w_kIdx] is wide = 0; op = 0x5f; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = w_src s>= acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestEqualStrictNoFeedback.Wide w_src is wide = 0; op = 0x60; w_src {
-	# no feedback
-	acc = TestEqualStrict(acc,w_src);
+:TestEqualStrictNoFeedback.Wide w_src is wide = 0; op = 0x60; w_src [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = w_src == acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestInstanceOf.Wide w_src, [w_kIdx] is wide = 0; op = 0x61; w_src; w_kIdx {
-	acc = InstanceOf(w_src, acc, _context);
+:TestInstanceOf.Wide w_src, [w_kIdx] is wide = 0; op = 0x61; w_src; w_kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = InstanceOf(w_src, acc);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestIn.Wide w_src is wide = 0; op = 0x62; w_src {
-	acc = HasProperty(w_src, acc, _context,0:4);
+:TestIn.Wide w_src is wide = 0; op = 0x62; w_src [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = HasProperty(acc, w_src);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestUndetectable.Wide is wide = 0; op = 0x63 {
-	acc = TestUndetectable(acc);
+:TestUndetectable.Wide is wide = 0; op = 0x63 [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = TestUndetectable(acc);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestNull.Wide is wide = 0; op = 0x64 {
-	acc = TestEqualStrict(acc,Null);
+:TestNull.Wide is wide = 0; op = 0x64 [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = acc == Null;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestUndefined.Wide is wide = 0; op = 0x65 {
-	acc = TestEqualStrict(acc,Undefined);
+:TestUndefined.Wide is wide = 0; op = 0x65 [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = acc == Undefined;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestTypeOf.Wide kFlag8 is wide = 0; op = 0x66; kFlag8 {
+:TestTypeOf.Wide kFlag8 is wide = 0; op = 0x66; kFlag8 [ afterTest = 1; globalset(inst_next, afterTest); ] {
 	tp:4 = TypeOf(acc);
 	lit:4 = cpool(0,inst_start,kFlag8, $(CP_LITERALTYPE));
-	if (tp == lit) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+	tst = tp == lit;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
 :ToName.Wide w_dst is wide = 0; op = 0x67; w_dst {
 	w_dst = ToName(acc, _context);
@@ -388,24 +401,23 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	w_dst = ToObject(acc);
 }
 :CreateRegExpLiteral.Wide [w_kIdx], [w_kIdx_2], kFlag8 is wide = 0; op = 0x6b; w_kIdx; w_kIdx_2; kFlag8 {
-	acc = CreateRegExpLiteral(w_kIdx:4, w_kIdx_2:4, kFlag8:4);
+	cp:4 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
+	acc = CreateRegExpLiteral(cp, kFlag8:4);
 }
 :CreateArrayLiteral.Wide [w_kIdx], [w_kIdx_2], kFlag8 is wide = 0; op = 0x6c; w_kIdx; w_kIdx_2; kFlag8 {
-	literal_index:4 = w_kIdx_2;
-	acc = CreateArrayLiteral(_context, _closure, literal_index, w_kIdx:4, kFlag8:4);
+	cp:4 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
+	acc = CreateArrayLiteral(cp);
 }
 #TODO REDO NOW both
 :CreateEmptyArrayLiteral.Wide [w_kIdx] is wide = 0; op = 0x6d; w_kIdx {
-	literal_index:4 = w_kIdx;
-	acc = CreateObjectLiteral(_context, _closure, literal_index);
+	acc = CreateEmptyArrayLiteral();
 }
 :CreateObjectLiteral.Wide [w_kIdx], [w_kIdx_2], kFlag8, w_dst is wide = 0; op = 0x6e; w_kIdx; w_kIdx_2; kFlag8; w_dst {
-	literal_index:4 = w_kIdx_2;
 	cp:4 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
-	w_dst = CreateObjectLiteral(_context, _closure, cp, literal_index, kFlag8:4);
+	w_dst = CreateObjectLiteral(cp);
 }
 :CreateEmptyObjectLiteral.Wide is wide = 0; op = 0x6f {
-	acc = CreateEmptyObjectLiteral(_context);
+	acc = CreateEmptyObjectLiteral();
 }
 :GetTemplateObject.Wide [w_kIdx] is wide = 0; op = 0x70; w_kIdx {
     cp:4 = cpool(0, inst_start, w_kIdx, $(CP_CONSTANTS));
@@ -413,7 +425,7 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 }
 :CreateClosure.Wide [w_kIdx], [w_kIdx_2], kFlag8 is wide = 0; op = 0x71; w_kIdx; w_kIdx_2; kFlag8 {
 	cp:4 = cpool(0,inst_start, w_kIdx, $(CP_CONSTANTS));
-	acc = CreateClosure(_context, cp, w_kIdx_2:4, kFlag8:4);
+	acc = CreateClosure(cp);
 }
 :CreateBlockContext.Wide [w_kIdx] is wide = 0; op = 0x72; w_kIdx {
 	cp:4 = cpool(0,inst_start,w_kIdx, $(CP_CONSTANTS));
@@ -444,7 +456,6 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	acc = CreateRestParameter();
 }
 :JumpLoop.Wide [w_destloop], [w_kImm:4] is wide = 0; op = 0x7a; w_destloop; w_kImm {
-	CheckOSRLevel(w_kImm:4);
 	goto w_destloop;
 }
 :Jump.Wide [w_dest] is wide = 0; op = 0x7b; w_dest {
@@ -512,14 +523,26 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :JumpIfToBooleanTrue.Wide [w_dest] is wide = 0; op = 0x86; w_dest {
 	if ( ToBoolean(acc) == True) goto w_dest;
 }
+:JumpIfToBooleanTrue.Wide [w_dest] is wide = 0 & afterTest = 1; op = 0x86; w_dest {
+	if (tst) goto w_dest;
+}
 :JumpIfToBooleanFalse.Wide [w_dest] is wide = 0; op = 0x87; w_dest {
 	if ( ToBoolean(acc) == False) goto w_dest;
+}
+:JumpIfToBooleanFalse.Wide [w_dest] is wide = 0 & afterTest = 1; op = 0x87; w_dest {
+	if (!tst) goto w_dest;
 }
 :JumpIfTrue.Wide [w_dest] is wide = 0; op = 0x88; w_dest {
 	if (acc == True) goto w_dest;
 }
+:JumpIfTrue.Wide [w_dest] is wide = 0 & afterTest = 1; op = 0x88; w_dest {
+	if (tst) goto w_dest;
+}
 :JumpIfFalse.Wide [w_dest] is wide = 0; op = 0x89; w_dest {
 	if (acc == False) goto w_dest;
+}
+:JumpIfFalse.Wide [w_dest] is wide = 0 & afterTest = 1; op = 0x89; w_dest {
+	if (!tst) goto w_dest;
 }
 :JumpIfNull.Wide [w_dest] is wide = 0; op = 0x8a; w_dest {
 	if (acc == Null) goto w_dest;
@@ -538,7 +561,12 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	if (acc == JSReceiver) goto w_dest;
 }
 :SwitchOnSmiNoFeedback.Wide [w_kIdx], [w_kUImm], [w_kImm] is wide = 0; op = 0x8f; w_kIdx; w_kUImm; w_kImm {
-  SwitchOnSmiNoFeedback(cpool(0:4, inst_start,0, 0:4));
+	# jump to table[acc - base] (constant pool entries kIdx..), fall through when out of range;
+	# the analyzer gives the decompiler the targets as a jump table override
+	caseIndex:4 = acc - w_kImm;
+	if (caseIndex >= w_kUImm) goto inst_next;
+	target:4 = SwitchOnSmiNoFeedback(w_kIdx:4, caseIndex);
+	goto [target];
 }
 
 :ForInPrepare.Wide w_triple^rangeDst, [w_kIdx] is wide = 0; op = 0x91; w_triple; rangeDst; w_kIdx {
@@ -554,7 +582,6 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	acc = ForInStep(w_index);
 }
 :StackCheck.Wide is wide = 0; op = 0x95 {
-	StackCheck();
 }
 :SetPendingMessage.Wide is wide = 0; op = 0x96 {
 	acc = SetPendingMessage(acc);
@@ -620,3 +647,6 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :Abort.Wide [w_kIdx] is wide = 0; op = 0xab; w_kIdx {
 	Abort(w_kIdx:4);
 }
+
+} # with tryBegin=0
+

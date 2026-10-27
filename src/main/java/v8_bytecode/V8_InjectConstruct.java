@@ -57,11 +57,7 @@ public class V8_InjectConstruct extends V8_InjectPayload {
 		return false;
 	}
 	
-	@Override
-	public boolean isErrorPlaceholder() {
-		return true;
-	}
-	@Override
+@Override
 	public boolean isEquivalent(InjectPayload obj) {
 		if (this.getClass() != obj.getClass()) {
 			return false;

@@ -193,6 +193,11 @@ public final class BytecodeStruct implements IAllocatable {
 		return length;
 	}
 	
+	/** Parameter count including the receiver. */
+	public int getParameterSize() {
+		return parameterSize;
+	}
+	
 	public ConstantPoolStruct getConstantPool() {
 		if (cp instanceof ConstantPoolStruct) {
 			return (ConstantPoolStruct) cp;

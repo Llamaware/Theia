@@ -30,6 +30,7 @@ public final class ArrayStruct implements IAllocatable {
 	private final String name;
 	
 	private final ArraysAllocator arrAllocator;
+	private final int pointerSize;
 	
 	public final int kArrayLengthOffset;
 	public final int kArrayHeaderSize;
@@ -43,7 +44,7 @@ public final class ArrayStruct implements IAllocatable {
 	 *                (holes are a NaN bit pattern) instead of tagged values
 	 */
 	public ArrayStruct(final ReservObject obj, final ObjectsAllocator allocator, boolean doubles) throws Exception {
-		int pointerSize = allocator.getPointerSize();
+		pointerSize = allocator.getPointerSize();
 		
 		// start offsets initializing
 		kArrayLengthOffset = ObjectsAllocator.kMetaMap + pointerSize;
@@ -106,12 +107,23 @@ public final class ArrayStruct implements IAllocatable {
 		}
 		
 		allocator.setDataStruct(result, this);
-		
+		JsLiterals.record(allocator.getProgram(), result, JsLiterals.ARRAY_LITERALS, getArrayLiteral());
+		JsLiterals.record(allocator.getProgram(), result, JsLiterals.OBJECT_LITERALS, getObjectLiteral());
 		return result;
 	}
 	
 	public String getName() {
 		return name;
+	}
+
+	/** These elements as an array literal. */
+	public String getArrayLiteral() {
+		return JsLiterals.array(items, pointerSize);
+	}
+
+	/** This object literal boilerplate (key/value pairs) as an object literal. */
+	public String getObjectLiteral() {
+		return JsLiterals.object(items, pointerSize);
 	}
 
 	@Override

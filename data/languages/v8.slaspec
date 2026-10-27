@@ -38,6 +38,20 @@ define register offset=0x14000 size=4             # arguments
 	a113 a114 a115 a116 a117 a118 a119 a120 a121 a122 a123 a124 a125
 ];
 
+# outgoing call arguments: call payloads write receiver/arguments here in source order,
+# and the default prototype in v8.cspec reads its inputs from this bank
+define register offset=0x16000 size=4
+[
+	o0 o1 o2 o3 o4 o5 o6 o7 o8 o9 o10 o11 o12 o13 o14 o15
+	o16 o17 o18 o19 o20 o21 o22 o23 o24 o25 o26 o27 o28 o29 o30 o31
+	o32 o33 o34 o35 o36 o37 o38 o39 o40 o41 o42 o43 o44 o45 o46 o47
+	o48 o49 o50 o51 o52 o53 o54 o55 o56 o57 o58 o59 o60 o61 o62 o63
+	o64 o65 o66 o67 o68 o69 o70 o71 o72 o73 o74 o75 o76 o77 o78 o79
+	o80 o81 o82 o83 o84 o85 o86 o87 o88 o89 o90 o91 o92 o93 o94 o95
+	o96 o97 o98 o99 o100 o101 o102 o103 o104 o105 o106 o107 o108 o109 o110 o111
+	o112 o113 o114 o115 o116 o117 o118 o119 o120 o121 o122 o123 o124 o125 o126 o127
+];
+
 define register offset=0x3000 size=4             # registers
 [
 	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 
@@ -54,6 +68,8 @@ define register offset=0x2020 size=$(SIZE) [ True False Undefined TheHole Null J
 define register offset=0x2000 size=$(SIZE) [ pc fb _context _closure ];
 # range_size - special internal register for dealing with multiple stores/loads 
 define register offset=0x0080 size=$(SIZE) [ range_size acc sp];
+# boolean result of the last Test*, read by the jump that follows it
+define register offset=0x00A0 size=1 [ tst ];
 
 define token opcode(8)
 	op = (0,7)
@@ -70,6 +86,11 @@ define context contextreg
 	# same bits, unattached, so disassembly actions can assign them
 	rStartV = (24,31)
 	rEndV = (32,39)
+	# set on the instruction after a Test*, whose boolean result is then in tst
+	afterTest = (40,40) noflow
+	# set by the loader on the first instruction of a try region: offset of its handler
+	tryBegin = (41,41) noflow
+	handlerOff = (42,61) noflow
 ;
 
 define token operand(8)
@@ -113,6 +134,8 @@ define pcodeop CallVariadicCallOther;
 define pcodeop CheckOSRLevel;
 define pcodeop ThrowCallOther;
 define pcodeop StaDataPropertyInLiteralCallOther;
+define pcodeop ExceptionThrown;
+define pcodeop CaughtException;
 define pcodeop LdaNamedProperty;
 define pcodeop LdaKeyedProperty;
 define pcodeop StackCheck;
@@ -125,9 +148,12 @@ define pcodeop GetTypeStr;
 define pcodeop ToBoolean;
 define pcodeop TestEqual;
 define pcodeop TestEqualStrict;
+define pcodeop LogicalNot;
 define pcodeop GetGlobal;
 define pcodeop SetGlobalValue;
 define pcodeop StaNamedProperty;
+define pcodeop CreateEmptyArrayLiteral;
+define pcodeop StaNamedOwnProperty;
 define pcodeop StaKeyedProperty;
 define pcodeop GetSuperConstructor;
 define pcodeop InstanceOf;
@@ -200,6 +226,8 @@ define pcodeop ToNumeric;
 define pcodeop ResumeGenerator;
 define pcodeop Abort;
 
+with : tryBegin=0 {
+
 # destination for jumps
 dest: rel is kUImm [ rel = inst_start + kUImm; ] {
   export *[ram]:4 rel;
@@ -254,8 +282,7 @@ cache_length: kReg is kReg {export kReg;}
 	acc = False;
 }
 :LdaConstant [kIdx] is op = 0x9; kIdx {
-	cp:8 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
-	acc = GetConstant(cp);
+	acc = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
 }
 
 :LdaGlobal [kIdx], [kIdx_2] is op = 0xa; kIdx; kIdx_2 {
@@ -348,7 +375,7 @@ cache_length: kReg is kReg {export kReg;}
 	acc = LdaNamedProperty(object, cp);
 }
 :LdaKeyedProperty object, [kIdx] is op = 0x20; object; kIdx {
-	acc = LdaKeyedProperty(_context, object, acc);
+	acc = LdaKeyedProperty(object, acc);
 }
 # LdaModuleVariable <cell_index> <depth>
 :LdaModuleVariable [kImm], [kUImm] is op = 0x21; kImm; kUImm {
@@ -358,18 +385,15 @@ cache_length: kReg is kReg {export kReg;}
 	StaModuleVariable(acc, kImm:4, kUImm:4);
 }
 :StaNamedProperty object, [kIdx], [kIdx_2] is op = 0x23; object; kIdx; kIdx_2 {
- 	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
- 	val:4 = GetNamedProperty(object, cp);
-	StaNamedProperty(_context, val, acc, 1:4);
+	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
+	StaNamedProperty(object, cp, acc);
 }
 :StaNamedOwnProperty object, [kIdx], [kIdx_2] is op = 0x24; object; kIdx; kIdx_2 {
 	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
-	val:4 = GetNamedProperty(object, cp);
-	StaNamedProperty(_context, val, acc, 2:4);
+	StaNamedOwnProperty(object, cp, acc);
 }
 :StaKeyedProperty object, key, [kIdx] is op = 0x25; object; key; kIdx {
-	val:4 = GetKeyedProperty(object, key);
-	StaKeyedProperty(_context, val, acc, 1:4);
+	StaKeyedProperty(object, key, acc);
 }
 :StaDataPropertyInLiteral object, name, kFlag8, [kIdx] is op = 0x26; object; name; kFlag8; kIdx {
 	StaDataPropertyInLiteralCallOther();
@@ -456,10 +480,11 @@ cache_length: kReg is kReg {export kReg;}
   acc = ~acc;
 }
 :ToBooleanLogicalNot is op = 0x44 {
-	acc= ~(ToBoolean(acc));
+	tb:4 = ToBoolean(acc);
+	acc = LogicalNot(tb);
 }
 :LogicalNot is op = 0x45 {
-	acc= ~(acc);
+	acc = LogicalNot(acc);
 }
 :TypeOf is op = 0x46 {
 	acc = TypeOf(acc);
@@ -523,71 +548,85 @@ cache_length: kReg is kReg {export kReg;}
 :ConstructWithSpread constructor, rangeSrc^rangeDst, [kIdx] is op = 0x59; constructor; rangeSrc; rangeDst; kIdx {
 	acc = ConstructWithSpread(constructor:4, rangeSrc:4, range_size);
 }
-:TestEqual src, [kIdx] is op = 0x5a; src; kIdx {
-	if (src == acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestEqual src, [kIdx] is op = 0x5a; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = TestEqual(src, acc);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestEqualStrict src, [kIdx] is op = 0x5b; src; kIdx {
-	acc = TestEqualStrict(acc,src);
+:TestEqualStrict src, [kIdx] is op = 0x5b; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = src == acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestLessThan src, [kIdx] is op = 0x5c; src; kIdx {
-	if (src s< acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestLessThan src, [kIdx] is op = 0x5c; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = src s< acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestGreaterThan src, [kIdx] is op = 0x5d; src; kIdx {
-	if (src s> acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestGreaterThan src, [kIdx] is op = 0x5d; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = src s> acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestLessThanOrEqual src, [kIdx] is op = 0x5e; src; kIdx {
-	if (src s<= acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestLessThanOrEqual src, [kIdx] is op = 0x5e; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = src s<= acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestGreaterThanOrEqual src, [kIdx] is op = 0x5f; src; kIdx {
-	if (src s>= acc) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+:TestGreaterThanOrEqual src, [kIdx] is op = 0x5f; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = src s>= acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestEqualStrictNoFeedback src is op = 0x60; src {
-	# no feedback
-	acc = TestEqualStrict(acc,src);
+:TestEqualStrictNoFeedback src is op = 0x60; src [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = src == acc;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestInstanceOf src, [kIdx] is op = 0x61; src; kIdx {
-	acc = InstanceOf(src, acc, _context);
+:TestInstanceOf src, [kIdx] is op = 0x61; src; kIdx [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = InstanceOf(src, acc);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestIn src is op = 0x62; src {
-	acc = HasProperty(src, acc, _context,0:4);
+:TestIn src is op = 0x62; src [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = HasProperty(acc, src);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestUndetectable is op = 0x63 {
-	acc = TestUndetectable(acc);
+:TestUndetectable is op = 0x63 [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = TestUndetectable(acc);
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestNull is op = 0x64 {
-	acc = TestEqualStrict(acc,Null);
+:TestNull is op = 0x64 [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = acc == Null;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestUndefined is op = 0x65 {
-	acc = TestEqualStrict(acc,Undefined);
+:TestUndefined is op = 0x65 [ afterTest = 1; globalset(inst_next, afterTest); ] {
+	tst = acc == Undefined;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
-:TestTypeOf kFlag8 is op = 0x66; kFlag8 {
+:TestTypeOf kFlag8 is op = 0x66; kFlag8 [ afterTest = 1; globalset(inst_next, afterTest); ] {
 	tp:4 = TypeOf(acc);
 	lit:4 = cpool(0,inst_start,kFlag8, $(CP_LITERALTYPE));
-	if (tp == lit) goto <true>;
-	acc =False;
-	goto inst_next;
-	<true>
-	acc=True;
+	tst = tp == lit;
+	acc = False;
+	if (!tst) goto inst_next;
+	acc = True;
 }
 :ToName dst is op = 0x67; dst {
 	dst = ToName(acc, _context);
@@ -599,23 +638,22 @@ cache_length: kReg is kReg {export kReg;}
 	dst = ToObject(acc);
 }
 :CreateRegExpLiteral [kIdx], [kIdx_2], kFlag8 is op = 0x6b; kIdx; kIdx_2; kFlag8 {
-	acc = CreateRegExpLiteral(kIdx:4, kIdx_2:4, kFlag8:4);
+	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
+	acc = CreateRegExpLiteral(cp, kFlag8:4);
 }
 :CreateArrayLiteral [kIdx], [kIdx_2], kFlag8 is op = 0x6c; kIdx; kIdx_2; kFlag8 {
-	literal_index:4 = kIdx_2;
-	acc = CreateArrayLiteral(_context, _closure, literal_index, kIdx:4, kFlag8:4);
+	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
+	acc = CreateArrayLiteral(cp);
 }
 :CreateEmptyArrayLiteral [kIdx] is op = 0x6d; kIdx {
-	literal_index:4 = kIdx;
-	acc = CreateObjectLiteral(_context, _closure, literal_index);
+	acc = CreateEmptyArrayLiteral();
 }
 :CreateObjectLiteral [kIdx], [kIdx_2], kFlag8, dst is op = 0x6e; kIdx; kIdx_2; kFlag8; dst {
-	literal_index:4 = kIdx_2;
 	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
-	dst = CreateObjectLiteral(_context, _closure, cp, literal_index, kFlag8:4);
+	dst = CreateObjectLiteral(cp);
 }
 :CreateEmptyObjectLiteral is op = 0x6f {
-	acc = CreateEmptyObjectLiteral(_context);
+	acc = CreateEmptyObjectLiteral();
 }
 :GetTemplateObject [kIdx] is op = 0x70; kIdx {
     cp:4 = cpool(0, inst_start, kIdx, $(CP_CONSTANTS));
@@ -623,7 +661,7 @@ cache_length: kReg is kReg {export kReg;}
 }
 :CreateClosure [kIdx], [kIdx_2], kFlag8 is op = 0x71; kIdx; kIdx_2; kFlag8 {
 	cp:4 = cpool(0,inst_start, kIdx, $(CP_CONSTANTS));
-	acc = CreateClosure(_context, cp, kIdx_2:4, kFlag8:4);
+	acc = CreateClosure(cp);
 }
 :CreateBlockContext [kIdx] is op = 0x72; kIdx {
 	cp:4 = cpool(0,inst_start,kIdx, $(CP_CONSTANTS));
@@ -654,7 +692,6 @@ cache_length: kReg is kReg {export kReg;}
 	acc = CreateRestParameter();
 }
 :JumpLoop [destloop], [kImm:4] is op = 0x7a; destloop; kImm {
-	CheckOSRLevel(kImm:4);
 	goto destloop;
 }
 :Jump [dest] is op = 0x7b; dest {
@@ -722,14 +759,26 @@ cache_length: kReg is kReg {export kReg;}
 :JumpIfToBooleanTrue [dest] is op = 0x86; dest {
 	if ( ToBoolean(acc) == True) goto dest;
 }
+:JumpIfToBooleanTrue [dest] is op = 0x86 & afterTest = 1; dest {
+	if (tst) goto dest;
+}
 :JumpIfToBooleanFalse [dest] is op = 0x87; dest {
 	if ( ToBoolean(acc) == False) goto dest;
+}
+:JumpIfToBooleanFalse [dest] is op = 0x87 & afterTest = 1; dest {
+	if (!tst) goto dest;
 }
 :JumpIfTrue [dest] is op = 0x88; dest {
 	if (acc == True) goto dest;
 }
+:JumpIfTrue [dest] is op = 0x88 & afterTest = 1; dest {
+	if (tst) goto dest;
+}
 :JumpIfFalse [dest] is op = 0x89; dest {
 	if (acc == False) goto dest;
+}
+:JumpIfFalse [dest] is op = 0x89 & afterTest = 1; dest {
+	if (!tst) goto dest;
 }
 :JumpIfNull [dest] is op = 0x8a; dest {
 	if (acc == Null) goto dest;
@@ -748,7 +797,12 @@ cache_length: kReg is kReg {export kReg;}
 	if (acc == JSReceiver) goto dest;
 }
 :SwitchOnSmiNoFeedback [kIdx], [kUImm], [kImm] is op = 0x8f; kIdx; kUImm; kImm {
-  SwitchOnSmiNoFeedback(cpool(0:4, inst_start,0, 0:4));
+	# jump to table[acc - base] (constant pool entries kIdx..), fall through when out of range;
+	# the analyzer gives the decompiler the targets as a jump table override
+	caseIndex:4 = acc - kImm;
+	if (caseIndex >= kUImm) goto inst_next;
+	target:4 = SwitchOnSmiNoFeedback(kIdx:4, caseIndex);
+	goto [target];
 }
 
 :ForInEnumerate receiver is op = 0x90; receiver {
@@ -768,7 +822,6 @@ cache_length: kReg is kReg {export kReg;}
 	acc = ForInStep(index);
 }
 :StackCheck is op = 0x95 {
-	StackCheck();
 }
 :SetPendingMessage is op = 0x96 {
 	acc = SetPendingMessage(acc);
@@ -835,6 +888,23 @@ cache_length: kReg is kReg {export kReg;}
 }
 :Abort [kIdx] is op = 0xab; kIdx {
 	Abort(kIdx:4);
+}
+
+} # with tryBegin=0
+
+# The first instruction of a try region (marked by the loader) may instead continue at the
+# exception handler, with the exception in acc. Without this branch the decompiler would see
+# catch and finally blocks as unreachable.
+hdest: rel is handlerOff [ rel = inst_start + handlerOff; ] {
+  export *[ram]:4 rel;
+}
+:^instruction is tryBegin=1 & hdest & instruction [ tryBegin=0; ] {
+	thrown:1 = ExceptionThrown();
+	if (!thrown) goto <body>;
+	acc = CaughtException();
+	goto hdest;
+	<body>
+	build instruction;
 }
 
 @include "wide_instructions.sinc"

@@ -24,6 +24,7 @@ import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.task.TaskMonitor;
 import v8_bytecode.ReservObject;
 import v8_bytecode.RootObject;
+import v8_bytecode.RootStrings;
 import v8_bytecode.allocator.IAllocatable;
 import v8_bytecode.allocator.ObjectsAllocator;
 import v8_bytecode.allocator.SharedFunctionsAllocator;
@@ -219,8 +220,9 @@ public final class SharedFunctionInfoStruct implements IAllocatable {
 		var kDebugInfoOffset = kScriptOffset + pointerSize;
 		var kFunctionIdentifierOffset = kDebugInfoOffset + pointerSize;
 		var kFeedbackMetadataOffset = kFunctionIdentifierOffset + pointerSize;
-		var kPreParsedScopeDataOffset = kFeedbackMetadataOffset + pointerSize;
-		return kPreParsedScopeDataOffset + pointerSize;
+		// V8 6.5 has no PreParsedScopeData field: the literal id directly follows the feedback
+		// metadata, as in the constructor (counting it read |length| and merged closures of equal arity)
+		return kFeedbackMetadataOffset + pointerSize;
 	}
 	
 	public static int getScriptOffset(int pointerSize) {
@@ -306,7 +308,7 @@ public final class SharedFunctionInfoStruct implements IAllocatable {
 	
 	private void initFunction(final Address funcAddr, final ScopeInfoStruct scopeInfo, final ObjectsAllocator allocator) throws Exception {
 		if (nameObject instanceof RootObject) {
-			name = ((RootObject) nameObject).getName();
+			name = RootStrings.jsName((RootObject) nameObject);
 		} else {
 			name = (String) allocator.prepareForAlloc(nameObject);
 		}
@@ -326,19 +328,26 @@ public final class SharedFunctionInfoStruct implements IAllocatable {
 
 		Program program = allocator.getFpa().getCurrentProgram();
 		
+		// V8 maps parameter i (0 = receiver) of n to the register FromParameterIndex(i, n+1),
+		// which Theia decodes as a{n-i}: the receiver is a{n} and the last parameter is a0.
+		// Pin that storage so the signature can list them in source order.
 		final List<String> params = scopeInfo.getParams();
-		for (int i = params.size() - 1; i >= 0; --i) {
-			final String param = params.get(i).replace("empty_string", "");
-			args.add(new ParameterImpl(param, IntegerDataType.dataType, program.getRegister(String.format("a%d", i)), program, SourceType.USER_DEFINED));
+		final int n = bytecode.getParameterSize() > 0 ? bytecode.getParameterSize() - 1 : params.size();
+		args.add(new ParameterImpl("this", new PointerDataType(VoidDataType.dataType), program.getRegister(String.format("a%d", n)), program, SourceType.USER_DEFINED));
+		for (int i = 0; i < n; ++i) {
+			final String param = i < params.size() ? params.get(i).replace("empty_string", "") : String.format("param_%d", i + 1);
+			args.add(new ParameterImpl(param, IntegerDataType.dataType, program.getRegister(String.format("a%d", n - 1 - i)), program, SourceType.USER_DEFINED));
 		}
-		args.add(new ParameterImpl("this", new PointerDataType(VoidDataType.dataType), program.getRegister(String.format("a%d", params.size() + 1)), program, SourceType.USER_DEFINED));
-		func.updateFunction("__stdcall", null, FunctionUpdateType.DYNAMIC_STORAGE_ALL_PARAMS, true, SourceType.IMPORTED, args.toArray(ParameterImpl[]::new));
+		func.updateFunction("__stdcall", null, FunctionUpdateType.CUSTOM_STORAGE, true, SourceType.IMPORTED, args.toArray(ParameterImpl[]::new));
 		
 		final List<String> stackLocals = scopeInfo.getStackLocals();
 		final List<String> addedStackLocals = new ArrayList<>();
 		for (int i = 0; i < stackLocals.size(); ++i) {
 			int stackOffset = scopeInfo.getStackLocalsFirstSlot() + i;
 			String locName = stackLocals.get(i).replace("empty_string", "");
+			if (locName.isEmpty()) {
+				continue; // unnamed temporaries only add noise to the decompiler's own names
+			}
 			
 			if (!addedStackLocals.contains(locName)) {
 				addedStackLocals.add(locName);

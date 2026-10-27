@@ -1,0 +1,26 @@
+# Classes Theia keeps in its programs through Java serialization (FuncsStorage, EnumsStorage and
+# InstructionsStorage property maps). Since Ghidra 12.0.5 every deserialization has to pass a
+# global filter built from the *.serial.filter files in all modules' data directories; without
+# this file the stored constant pools and scopes cannot be read back once Ghidra reloads them
+# from the database. See Ghidra/Framework/FileSystem/data/serialFilterREADME.md.
+
+v8_bytecode.*;
+v8_bytecode.storage.*;
+
+# constant pool items
+java.lang.Number;
+java.lang.Integer;
+java.lang.Long;
+java.lang.Double;
+java.lang.String;
+
+# collections inside the stored objects (CollSer is the serial form of Map.of/List.of)
+java.util.ArrayList;
+java.util.HashMap;
+java.util.HashSet;
+java.util.CollSer;
+java.lang.Object;
+[Ljava.lang.Object;
+# HashMap/HashSet.readObject check their table size against the filter as a Map.Entry[]
+java.util.Map$Entry;
+[Ljava.util.Map$Entry;

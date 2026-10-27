@@ -96,22 +96,22 @@ public class V8_PcodeInjectLibrary extends PcodeInjectLibrary {
 			case ("InvokeIntrinsicCallOther"):
 			case ("CallVariadicCallOther"):
 			case ("CallRuntimeCallOther"):
-				payload = new V8_InjectCallVariadic("", language, 0);
+				payload = new V8_InjectCallVariadic("", language, getUniqueBase());
 				break;
 			case ("ConstructCallOther"):
-				payload = new V8_InjectConstruct("", language, 0);
+				payload = new V8_InjectConstruct("", language, getUniqueBase());
 				break;
 			case ("JSCallNCallOther"):
-				payload = new V8_InjectJSCallN("", language, 0);
+				payload = new V8_InjectJSCallN("", language, getUniqueBase());
 				break;
 			case ("CallJSRuntimeCallOther"):
-				payload = new V8_InjectCallJSRuntime("", language, 0);
+				payload = new V8_InjectCallJSRuntime("", language, getUniqueBase());
 				break;
 			case ("ThrowCallOther"):
-				payload = new V8_InjectThrow("", language, 0);
+				payload = new V8_InjectThrow("", language, getUniqueBase());
 				break;
 			case ("StaDataPropertyInLiteralCallOther"):
-				payload = new V8_InjectStaDataPropertyInLiteral("", language, 0);
+				payload = new V8_InjectStaDataPropertyInLiteral("", language, getUniqueBase());
 				break;
 			default:
 				return super.getPayload(type, name);

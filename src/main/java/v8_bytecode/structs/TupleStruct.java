@@ -73,12 +73,20 @@ public final class TupleStruct implements IAllocatable {
 		}
 		
 		allocator.setDataStruct(result, this);
-		
+		JsLiterals.record(allocator.getProgram(), result, JsLiterals.ARRAY_LITERALS, getArrayLiteral());
 		return result;
 	}
 	
 	public String getName() {
 		return name;
+	}
+
+	/** As an array literal boilerplate (elements kind, constant elements): the elements. */
+	public String getArrayLiteral() {
+		if (count == 2 && items.get(1) instanceof ArrayStruct elements) {
+			return elements.getArrayLiteral();
+		}
+		return JsLiterals.array(items.subList(Math.min(1, count), count), 4);
 	}
 
 	@Override
