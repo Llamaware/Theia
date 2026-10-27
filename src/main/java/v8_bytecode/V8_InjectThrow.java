@@ -1,5 +1,7 @@
 package v8_bytecode;
 
+import java.util.Map;
+
 //import ghidra.app.plugin.processors.sleigh.*;
 import ghidra.app.plugin.processors.sleigh.SleighLanguage;
 //import ghidra.app.plugin.processors.sleigh.template.*;
@@ -25,6 +27,14 @@ public class V8_InjectThrow extends V8_InjectPayload {
 		this.uniqueBase = uniqueBase;
 	}
 
+	/** The runtime function each throwing bytecode calls. */
+	private static final Map<String, String> RUNTIME_FUNCTIONS = Map.of(
+		"Throw", "Throw",
+		"ReThrow", "ReThrow",
+		"ThrowReferenceErrorIfHole", "ThrowReferenceError",
+		"ThrowSuperNotCalledIfHole", "ThrowSuperNotCalled",
+		"ThrowSuperAlreadyCalledIfNotHole", "ThrowSuperAlreadyCalledError");
+
 	@Override
 	public PcodeOp[] getPcode(Program program, InjectContext context) {
 		V8_PcodeOpEmitter pCode = new V8_PcodeOpEmitter(language, context.baseAddr, uniqueBase);
@@ -36,7 +46,7 @@ public class V8_InjectThrow extends V8_InjectPayload {
 		}
 		// get arguments from slaspec, definition in cspec
 		int condition = (int) context.inputlist.get(0).getOffset();
-		int runtimeid = (int) context.inputlist.get(1).getOffset();
+		int runtimeid = RuntimeIds.get(RUNTIME_FUNCTIONS.getOrDefault(instruction.getMnemonicString().split("\\.")[0], "Throw"));
 
 		if (condition > 0) {
 			pCode.emitConditionalBranchVarnode(instruction.getAddress().add(instruction.getLength()), condition, 4, "TheHole");

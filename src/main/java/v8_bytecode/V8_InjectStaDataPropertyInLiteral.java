@@ -30,7 +30,7 @@ public class V8_InjectStaDataPropertyInLiteral extends V8_InjectPayload {
 		}
 		// Runtime::kDefineDataPropertyInLiteral(object, name, value, flags)
 		pCode.emitAssignVarnodeFromPcodeOpCall("call_target", 4, "cpool", "0", "0x" + opAddr.toString(),
-				Integer.toString(DEFINE_DATA_PROPERTY_IN_LITERAL), Integer.toString(RUNTIMETYPE));
+				Integer.toString(RuntimeIds.get("DefineDataPropertyInLiteral")), Integer.toString(RUNTIMETYPE));
 		emitCallArgs(pCode, instruction.getRegister(0).getName(), instruction.getRegister(1).getName(), "acc");
 		pCode.emitAssignConstantToRegister(OUT_ARG + 3, (int) instruction.getScalar(2).getValue());
 		pCode.emitVarnodeCall("call_target", 4);

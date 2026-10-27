@@ -575,22 +575,22 @@ d_cache_length: kReg is kReg; d_Pad {export kReg;}
 	acc = SetPendingMessage(acc);
 }
 :Throw.ExtraWide is wide = 1; op = 0x97 {
-	ThrowCallOther($(TC_UNCONDITIONAL):4, 238:4);
+	ThrowCallOther($(TC_UNCONDITIONAL):4);
 }
 :ReThrow.ExtraWide is wide = 1; op = 0x98 {
-	ThrowCallOther($(TC_UNCONDITIONAL):4, 235:4);
+	ThrowCallOther($(TC_UNCONDITIONAL):4);
 }
 :Return.ExtraWide is wide = 1; op = 0x99 {
 	return [acc];
 }
 :ThrowReferenceErrorIfHole.ExtraWide [d_kIdx] is wide = 1; op = 0x9a; d_kIdx {
-	ThrowCallOther($(TC_NOTTHEHOLE):4, 257:4);
+	ThrowCallOther($(TC_NOTTHEHOLE):4);
 }
 :ThrowSuperNotCalledIfHole.ExtraWide is wide = 1; op = 0x9b {
-	ThrowCallOther($(TC_NOTTHEHOLE):4, 47:4);
+	ThrowCallOther($(TC_NOTTHEHOLE):4);
 }
 :ThrowSuperAlreadyCalledIfNotHole.ExtraWide is wide = 1; op = 0x9c {
-	ThrowCallOther($(TC_THEHOLE):4, 46:4);
+	ThrowCallOther($(TC_THEHOLE):4);
 }
 :RestoreGeneratorState.ExtraWide d_src is wide = 1; op = 0x9d; d_src {
 	acc = GetGeneratorState(d_src);
@@ -604,8 +604,6 @@ d_cache_length: kReg is kReg; d_Pad {export kReg;}
 	IncBlockCounter(d_kIdx:4);
 }
 :Illegal.ExtraWide is wide = 1; op = 0xac {Illegal();}
-# was not presented in our version, only for switch purposes
-:Nop.ExtraWide is wide = 1; op = 0xa8 {}
 # ---- bytecodes added for V8 6.5 ----
 :Exp.ExtraWide d_src, [d_kIdx] is wide = 1; op = 0x2d; d_src; d_kIdx {
 	acc = Exp(d_src, acc);

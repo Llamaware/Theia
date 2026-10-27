@@ -607,11 +607,18 @@ public final class NwjcParser {
 	        }
 	        
 	        
-	        // Build mapping for intrinsic functions: intrinsic index i maps to magic number = runtimeCount + i.
+	        // InvokeIntrinsic operands are IntrinsicsHelper::IntrinsicId values (v8_intrinsics.json);
+	        // each calls the runtime function of the same name. The store keeps "names.size() + id".
 	        Map<Integer, Integer> newIntrinsicsToRuntimes = new HashMap<>();
 	        int count = names.size();
-	        for (int i = 0; i < count; i++) {
-	            newIntrinsicsToRuntimes.put(i, count + i);
+	        File intrinsicsFile = Application.getModuleDataFile("v8_intrinsics.json").getFile(false);
+	        int intrinsic = 0;
+	        for (final var item : jsonArrayFromFile(intrinsicsFile.getAbsolutePath())) {
+	            int runtime = names.indexOf(item.getAsString());
+	            if (runtime < 0) {
+	                log.appendMsg("Intrinsic without a runtime function: " + item.getAsString());
+	            }
+	            newIntrinsicsToRuntimes.put(intrinsic++, count + Math.max(runtime, 0));
 	        }
 	        
 	        RuntimesIntrinsicsStore result = new RuntimesIntrinsicsStore(names, allArgs, newIntrinsicsToRuntimes);

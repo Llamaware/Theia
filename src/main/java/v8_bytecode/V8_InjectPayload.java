@@ -23,8 +23,6 @@ public abstract class V8_InjectPayload implements InjectPayload {
 	protected static final int INTRINSICTYPE = 1;
 	protected static final int RUNTIMETYPE = 2;
 	protected static final int PROPERTYTYPE = 3;
-	/** Runtime::kDefineDataPropertyInLiteral in node 9.7.1. */
-	protected static final int DEFINE_DATA_PROPERTY_IN_LITERAL = 323;
 	/** Prefix of the outgoing-argument registers read by the default prototype. */
 	protected static final String OUT_ARG = "o";
 

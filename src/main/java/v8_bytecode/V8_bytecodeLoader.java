@@ -38,7 +38,8 @@ import v8_bytecode.allocator.NwjcParser;
  * Provide class-level documentation that describes what this loader does.
  */
 public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
-	private static final long INSTANCE_SIZE = 0x3D2L;
+	/** Code cache magic is 0xC0DE0000 ^ ExternalReferenceTable size of the V8 build (0x3D2 in NW.js 0.29.0 x86). */
+	private static final long EXTERNAL_REFERENCE_COUNT = 0x3D2L;
 	static final String LDR_NAME = "NWBin (.bin) Loader";
 	private NwjcParser parser = null;
 
@@ -58,7 +59,7 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 
 		long magic = reader.readNextUnsignedInt();
 
-		if (magic == (0xC0DE0000L ^ INSTANCE_SIZE)) { // only supports x32 right now
+		if (magic == (0xC0DE0000L ^ EXTERNAL_REFERENCE_COUNT)) { // only supports x32 right now
 			loadSpecs.add(new LoadSpec(this, ObjectsAllocator.CODE_BASE, new LanguageCompilerSpecPair("V8:LE:32:default", "default"), true));
 		}
 

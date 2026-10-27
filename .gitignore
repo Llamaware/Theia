@@ -2,3 +2,4 @@
 /dist/
 /build/
 /.gradle/
+__pycache__/

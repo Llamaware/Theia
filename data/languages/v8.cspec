@@ -83,7 +83,6 @@
 	<callotherfixup targetop="ThrowCallOther">
 		<pcode dynamic="true">
 			<input name="condition"/>
-			<input name="runtimeid"/>
 		</pcode>
 	</callotherfixup>
 	<callotherfixup targetop="CallJSRuntimeCallOther">

@@ -827,22 +827,22 @@ cache_length: kReg is kReg {export kReg;}
 	acc = SetPendingMessage(acc);
 }
 :Throw is op = 0x97 {
-	ThrowCallOther($(TC_UNCONDITIONAL):4, 238:4);
+	ThrowCallOther($(TC_UNCONDITIONAL):4);
 }
 :ReThrow is op = 0x98 {
-	ThrowCallOther($(TC_UNCONDITIONAL):4, 235:4);
+	ThrowCallOther($(TC_UNCONDITIONAL):4);
 }
 :Return is op = 0x99 {
 	return [acc];
 }
 :ThrowReferenceErrorIfHole [kIdx] is op = 0x9a; kIdx {
-	ThrowCallOther($(TC_NOTTHEHOLE):4, 257:4);
+	ThrowCallOther($(TC_NOTTHEHOLE):4);
 }
 :ThrowSuperNotCalledIfHole is op = 0x9b {
-	ThrowCallOther($(TC_NOTTHEHOLE):4, 47:4);
+	ThrowCallOther($(TC_NOTTHEHOLE):4);
 }
 :ThrowSuperAlreadyCalledIfNotHole is op = 0x9c {
-	ThrowCallOther($(TC_THEHOLE):4, 46:4);
+	ThrowCallOther($(TC_THEHOLE):4);
 }
 :RestoreGeneratorState src is op = 0x9d; src {
 	acc = GetGeneratorState(src);
@@ -866,9 +866,6 @@ cache_length: kReg is kReg {export kReg;}
 	IncBlockCounter(kIdx:4);
 }
 :Illegal is op = 0xac {Illegal();}
-# was not presented in our version, only for switch purposes
-:Nop is op = 0xad {}
-
 # ---- bytecodes added for V8 6.5 ----
 :Exp src, [kIdx] is op = 0x2d; src; kIdx {
 	acc = Exp(src, acc);
