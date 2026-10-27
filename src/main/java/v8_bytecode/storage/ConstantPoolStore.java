@@ -11,11 +11,13 @@ public final class ConstantPoolStore implements Serializable {
 		this.items = items;
 	}
 	
+	/** @return the item, or null if {@code index} is outside this constant pool */
 	public Object getConstItem(int index) {
-		return items.get(index).getItem();
+		return (index >= 0 && index < items.size()) ? items.get(index).getItem() : null;
 	}
 	
+	/** @return the item's address, or -1 if {@code index} is outside this constant pool */
 	public long getConstItemAddress(int index) {
-		return items.get(index).getAddress();
+		return (index >= 0 && index < items.size()) ? items.get(index).getAddress() : -1;
 	}
 }

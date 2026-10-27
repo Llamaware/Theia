@@ -26,6 +26,12 @@ import ghidra.program.model.data.DataTypeConflictHandler;
 import ghidra.program.model.data.DataTypeManager;
 import ghidra.program.model.data.Enum;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.address.AddressSet;
+import ghidra.program.disassemble.Disassembler;
+import java.math.BigInteger;
+import ghidra.program.model.lang.Register;
+import ghidra.program.model.listing.ContextChangeException;
+import ghidra.program.model.listing.ProgramContext;
 import ghidra.program.model.mem.MemoryBlockException;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.util.exception.NotFoundException;
@@ -79,7 +85,11 @@ public final class NwjcParser {
 	private final DataTypeManager mgr;
 	private final MessageLog2 log;
 	private final TaskMonitor monitor;
-	private static boolean is32Bit;
+	private final boolean is32Bit;
+	// LO_SPACE objects and maps are back-referenced by allocation index, not chunk offset
+	private final List<ReservObject> largeObjects = new ArrayList<>();
+	private final List<ReservObject> maps = new ArrayList<>();
+	private static final long kValueIndexMask = 0x1FFFFFFFL; // SerializerReference::ValueIndexBits
 	
 	private final int kPointerSizeLog2;
 	public final int kPointerSize;
@@ -94,7 +104,7 @@ public final class NwjcParser {
 		this.mgr = program.getDataTypeManager();
 		this.log = log;
 		this.monitor = monitor;
-		NwjcParser.is32Bit = is32Bit;
+		this.is32Bit = is32Bit;
 		
 		kPointerSizeLog2 = is32Bit ? 2 : 3;
 		kPointerSize = is32Bit ? 4 : 8;
@@ -125,7 +135,7 @@ public final class NwjcParser {
 		EnumDataTypes enumsDt = new EnumDataTypes(rootsDt, runsDt, intrsDt, jsRuns, builtinsEnum, sptEnum, predict, typeofDt);
 		EnumsStorage enums = new EnumsStorage(rootsEnum, runsIntrsStore);
 		
-		allocator = new ObjectsAllocator(enums, enumsDt, program, monitor);
+		allocator = new ObjectsAllocator(enums, enumsDt, program, monitor, reader.length());
 	}
 	
 	public String getRandomParsingMessage() {
@@ -246,7 +256,9 @@ public final class NwjcParser {
 		try {
 			readData(root, root.getSize(), AllocSpace.NEW_SPACE, 0, 0);
 		} catch (Exception e) {
+			// Continuing after a failed read would build the program from a desynced stream.
 			log.appendMsg("Caught exception in readData: " + e.getMessage());
+			throw new IOException("Failed to deserialize code cache at offset " + reader.getPointerIndex() + ": " + e.getMessage(), e);
 		}
 		
 		log.appendMsg("Begin deserializeDeferredObjects at: " + reader.getPointerIndex());
@@ -276,8 +288,11 @@ public final class NwjcParser {
 		        }
 		    }
 
-		    loadSpaceObjects(objs);
 		}
+
+		// The root slot holds the top-level SharedFunctionInfo; its Script lists every function.
+		// (Only OLD_SPACE chunk 0 starts with it, so it must not be looked up per chunk.)
+		loadSpaceObjects(root);
 
 
 
@@ -347,13 +362,28 @@ public final class NwjcParser {
 		FlatProgramAPI fpa = new FlatProgramAPI(program);
 		
 		final List<Address> doDisasm = new ArrayList<>();
+		final List<Address[]> tryRegions = new ArrayList<>();
 		
 		for (int i = 0; i < sfCount; ++i) {
 			log.appendMsg("loop: " + i);
 			log.appendMsg("getAlignedObject for sharedFuncs: " + (ArrayStruct.getArrayHeaderSize(kPointerSize) + i * kPointerSize));
-			final ReservObject weakFunc = (ReservObject) sharedFuncs.getAlignedObject(ArrayStruct.getArrayHeaderSize(kPointerSize) + i * kPointerSize);
+			// Script::shared_function_infos holds a WeakCell per function literal, or undefined
+			// for functions that were never compiled; a WeakCell's value may also be cleared (Smi 0).
+			final Object weakObj = sharedFuncs.getAlignedObject(ArrayStruct.getArrayHeaderSize(kPointerSize) + i * kPointerSize);
+			if (!(weakObj instanceof ReservObject)) {
+				log.appendMsg("No SharedFunctionInfo for function literal " + i + ": " + weakObj);
+				allocator.getMonitor().incrementProgress(1);
+				continue;
+			}
+			final ReservObject weakFunc = (ReservObject) weakObj;
 			log.appendMsg("weakFunc: " + weakFunc.toString());
-			final ReservObject func = (ReservObject) weakFunc.getAlignedObject(kPointerSize); // kPointerSize
+			final Object funcObj = weakFunc.getAlignedObject(kPointerSize);
+			if (!(funcObj instanceof ReservObject)) {
+				log.appendMsg("Cleared WeakCell for function literal " + i + ": " + funcObj);
+				allocator.getMonitor().incrementProgress(1);
+				continue;
+			}
+			final ReservObject func = (ReservObject) funcObj;
 			log.appendMsg("func: " + func.toString());
 			
 			SharedFunctionInfoStruct sf = SharedFunctionInfoStruct.getSharedFunctionInfo(allocator, i);
@@ -405,6 +435,7 @@ public final class NwjcParser {
 			    
 			    // Create label for the handler
 			    fpa.createLabel(offsetAddr, String.format("%s_handler_%d", sf.getName(), j), true, SourceType.USER_DEFINED);
+			    tryRegions.add(new Address[] { startAddr, offsetAddr, endAddr });
 			    
 			    log.appendMsg("Set label and comments for handler " + j);
 			}
@@ -423,7 +454,43 @@ public final class NwjcParser {
 		        log.appendException(e);
 		    }
 		}
+		markTryRegions(tryRegions);
 	}
+	
+	/**
+	 * Marks the first instruction of each try region with the tryBegin/handlerOff context fields,
+	 * so the try wrapper in v8.slaspec gives it a branch to the handler. Regions sharing a start
+	 * use the innermost (shortest) one. Disassembly that flows into an address resets noflow context,
+	 * so each marked instruction is disassembled again on its own, which honours the stored value.
+	 */
+	private void markTryRegions(final List<Address[]> regions) {
+		final Map<Address, Address[]> innermost = new HashMap<>();
+		for (final Address[] r : regions) {
+			final Address[] old = innermost.get(r[0]);
+			if (old == null || r[2].subtract(r[0]) < old[2].subtract(old[0])) {
+				innermost.put(r[0], r);
+			}
+		}
+		final ProgramContext context = program.getProgramContext();
+		final Register begin = context.getRegister("tryBegin");
+		final Register offset = context.getRegister("handlerOff");
+		for (final Address[] r : innermost.values()) {
+			final long delta = r[1].subtract(r[0]);
+			if (delta <= 0 || delta >= (1L << 20)) {
+				log.appendMsg("Handler at " + r[1] + " out of reach of the try region at " + r[0]);
+				continue;
+			}
+			try {
+				program.getListing().clearCodeUnits(r[0], r[0], false);
+				context.setValue(begin, r[0], r[0], BigInteger.ONE);
+				context.setValue(offset, r[0], r[0], BigInteger.valueOf(delta));
+				Disassembler.getDisassembler(program, monitor, null).disassemble(r[0], new AddressSet(r[0]), false);
+			} catch (ContextChangeException e) {
+				log.appendException(e);
+			}
+		}
+	}
+	
 	
 	private RootsStore loadRoots() {
 		try {
@@ -540,11 +607,18 @@ public final class NwjcParser {
 	        }
 	        
 	        
-	        // Build mapping for intrinsic functions: intrinsic index i maps to magic number = runtimeCount + i.
+	        // InvokeIntrinsic operands are IntrinsicsHelper::IntrinsicId values (v8_intrinsics.json);
+	        // each calls the runtime function of the same name. The store keeps "names.size() + id".
 	        Map<Integer, Integer> newIntrinsicsToRuntimes = new HashMap<>();
 	        int count = names.size();
-	        for (int i = 0; i < count; i++) {
-	            newIntrinsicsToRuntimes.put(i, count + i);
+	        File intrinsicsFile = Application.getModuleDataFile("v8_intrinsics.json").getFile(false);
+	        int intrinsic = 0;
+	        for (final var item : jsonArrayFromFile(intrinsicsFile.getAbsolutePath())) {
+	            int runtime = names.indexOf(item.getAsString());
+	            if (runtime < 0) {
+	                log.appendMsg("Intrinsic without a runtime function: " + item.getAsString());
+	            }
+	            newIntrinsicsToRuntimes.put(intrinsic++, count + Math.max(runtime, 0));
 	        }
 	        
 	        RuntimesIntrinsicsStore result = new RuntimesIntrinsicsStore(names, allArgs, newIntrinsicsToRuntimes);
@@ -739,11 +813,16 @@ public final class NwjcParser {
 			case 0x2F: // kNop
 				break; // return
 			case 0x4F: { // kNextChunk
-				int newChunk = reader.readNextByte() & 0xFF;
-				lastChunkIndex.put(space, newChunk);
-				//System.out.println(String.format("Switch to the space #%d", newChunk));
-				log.appendMsg("Switch to the space #" + newChunk);
-				// TODO: implement
+				// The operand is the space whose next reserved chunk becomes current
+				// (DefaultDeserializerAllocator::MoveToNextChunk), not a chunk index.
+				final AllocSpace chunkSpace = AllocSpace.fromInt(reader.readNextByte() & 0xFF);
+				final int newChunk = lastChunkIndex.getOrDefault(chunkSpace, 0) + 1;
+				final List<ReservObject> chunks = reserv.get(chunkSpace);
+				if (chunks == null || newChunk >= chunks.size()) {
+					throw new IOException("kNextChunk past the reserved chunks of " + chunkSpace);
+				}
+				lastChunkIndex.put(chunkSpace, newChunk);
+				log.appendMsg("Switch " + chunkSpace + " to chunk #" + newChunk);
 			} break;
 			case 0x6F: // kDeferred
 				insertOff = size;
@@ -999,20 +1078,20 @@ public final class NwjcParser {
 
 	    log.appendMsg("readSpaceData: insertOff=" + insertOff + ", where=" + where + ", space=" + space);
 
-	    if (where.equals(AllocWhere.kNewObject) && state.getHow().equals(AllocHow.kPlain)
-	            && state.getWithin().equals(AllocPoint.kStartOfObject)) {
-	        //log.appendMsg("Reading new object at: " + reader.getPointerIndex());
+	    // Every case below must consume exactly the operands V8's ReadDataCase reads,
+	    // otherwise the rest of the stream is parsed out of sync.
+	    if (where.equals(AllocWhere.kNewObject)) {
 	        readObject(object, insertOff, space, depth);
 	    } else {
-	        if (where.equals(AllocWhere.kNewObject)) {
-	            log.appendMsg("TODO: NewObject not implemented yet");
-	        } else if (where.equals(AllocWhere.kBackref)) {
+	        if (where.equals(AllocWhere.kBackref)) {
 	            Object backObj = getBackReferencedObject(AllocSpace.fromInt(state.getValue() & 7));
 	            //log.appendMsg("Backref object found, addObject at: " + insertOff + ", object: " + backObj);
 	            //log.appendMsg("Currently selected object: " + object.toString() + ", hashCode: " + object.hashCode());
 	            object.addObject(insertOff, backObj);
 	        } else if (where.equals(AllocWhere.kBackrefWithSkip)) {
-	            log.appendMsg("TODO: BackrefWithSkip not implemented yet");
+	            insertOff += readInt();
+	            Object backObj = getBackReferencedObject(AllocSpace.fromInt(state.getValue() & 7));
+	            object.addObject(insertOff, backObj);
 	        } else if (where.equals(AllocWhere.kRootArray)) {
 	            long id = readInt();
 	            //log.appendMsg("Root array index: " + id + ", roots size: " + roots.size());
@@ -1027,9 +1106,14 @@ public final class NwjcParser {
 	                throw new IOException("Invalid root index: " + id);
 	            }
 	        } else if (where.equals(AllocWhere.kPartialSnapshotCache)) {
-	            log.appendMsg("TODO: PartialSnapshotCache not implemented yet");
+	            // Only startup snapshots use the partial snapshot cache, never a code cache.
+	            throw new IOException("Unexpected kPartialSnapshotCache reference in code cache");
 	        } else if (where.equals(AllocWhere.kExternalReference)) {
-	            log.appendMsg("TODO: ExternalReference not implemented yet");
+	            // Only occurs inside Code objects, which are not modelled; consume skip + id.
+	            insertOff += readInt();
+	            long referenceId = readInt();
+	            log.appendMsg("ExternalReference #" + referenceId + " at " + insertOff);
+	            object.addObject(insertOff, null);
 	        } else if (where.equals(AllocWhere.kAttachedReference)) {
 	            long index = readInt();
 	            //log.appendMsg("Attached reference index: " + index + ", attached size: " + attached.size());
@@ -1063,12 +1147,16 @@ public final class NwjcParser {
 		long chunkIndex = 0L;
 		long chunkOffset = 0L;
 
-		if (space.equals(AllocSpace.LO_SPACE)) {
-			// TODO: implement
-			log.appendMsg("space equals LO_SPACE in getBackReferencedObject");
-		} else if (space.equals(AllocSpace.MAP_SPACE)) {
-			// TODO: implement
-			log.appendMsg("space equals MAP_SPACE in getBackReferencedObject");
+		if (space.equals(AllocSpace.LO_SPACE) || space.equals(AllocSpace.MAP_SPACE)) {
+			final List<ReservObject> byIndex = space.equals(AllocSpace.LO_SPACE) ? largeObjects : maps;
+			final int index = (int) (backRef & kValueIndexMask);
+			if (index >= byIndex.size()) {
+				throw new IOException("Back reference to unknown " + space + " object #" + index);
+			}
+			final Object backObj = byIndex.get(index);
+			hots.put(lastHotIndex, backObj);
+			lastHotIndex = (lastHotIndex + 1) & 7;
+			return backObj;
 		} else {
 			if (is32Bit) {
 				chunkIndex = (backRef & 0x1FFE0000L) >> 0x11L;
@@ -1149,7 +1237,19 @@ public final class NwjcParser {
 
 	private void readObject(final ReservObject object, long insertOff, AllocSpace space, int depth) throws IOException {
 		long size = readInt() << kObjectAlignmentBits;
-		
+
+		if (space.equals(AllocSpace.LO_SPACE)) {
+			// Large objects get their own allocation (DefaultDeserializerAllocator::AllocateRaw),
+			// which first reads the Executability byte.
+			reader.readNextByte();
+			nextAlignment = AllocationAlignment.kWordAligned;
+			ReservObject newObj = new ReservObject(size, kPointerSize);
+			largeObjects.add(newObj);
+			readData(newObj, size, space, 0, depth + 1);
+			object.addObject(insertOff, newObj);
+			return;
+		}
+
 		int spaceChunk = lastChunkIndex.get(space);
 		if (!nextAlignment.equals(AllocationAlignment.kWordAligned)) {
 			final ReservObject reservObject = reserv.get(space).get(spaceChunk);
@@ -1168,6 +1268,9 @@ public final class NwjcParser {
 
 		ReservObject newObj = new ReservObject(size, kPointerSize);
 		reservObj.addObject(address, newObj);
+		if (space.equals(AllocSpace.MAP_SPACE)) {
+			maps.add(newObj);
+		}
 
 		readData(newObj, size, space, 0, depth + 1);
 

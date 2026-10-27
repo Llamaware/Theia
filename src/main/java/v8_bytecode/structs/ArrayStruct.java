@@ -30,12 +30,21 @@ public final class ArrayStruct implements IAllocatable {
 	private final String name;
 	
 	private final ArraysAllocator arrAllocator;
+	private final int pointerSize;
 	
 	public final int kArrayLengthOffset;
 	public final int kArrayHeaderSize;
 	
 	public ArrayStruct(final ReservObject obj, final ObjectsAllocator allocator) throws Exception {
-		int pointerSize = allocator.getPointerSize();
+		this(obj, allocator, false);
+	}
+
+	/**
+	 * @param doubles true for a FixedDoubleArray, whose elements are raw 8-byte doubles
+	 *                (holes are a NaN bit pattern) instead of tagged values
+	 */
+	public ArrayStruct(final ReservObject obj, final ObjectsAllocator allocator, boolean doubles) throws Exception {
+		pointerSize = allocator.getPointerSize();
 		
 		// start offsets initializing
 		kArrayLengthOffset = ObjectsAllocator.kMetaMap + pointerSize;
@@ -58,7 +67,13 @@ public final class ArrayStruct implements IAllocatable {
 		
 		items = new ArrayList<>();
 		for (int i = 0; i < count; ++i) {
-			final Object cpObj = allocator.prepareForAlloc(obj.getAlignedObject(kArrayHeaderSize + i * pointerSize));
+			final Object cpObj;
+			if (doubles) {
+				final long off = kArrayHeaderSize + i * 8L;
+				cpObj = ObjectsAllocator.twoIntsToDouble(obj.getInt(off), obj.getInt(off + 4));
+			} else {
+				cpObj = allocator.prepareForAlloc(obj.getAlignedObject(kArrayHeaderSize + i * pointerSize));
+			}
 			items.add(cpObj);
 			
 			allocator.addStructureField(s, cpObj, String.format("Item%d", i));
@@ -92,12 +107,23 @@ public final class ArrayStruct implements IAllocatable {
 		}
 		
 		allocator.setDataStruct(result, this);
-		
+		JsLiterals.record(allocator.getProgram(), result, JsLiterals.ARRAY_LITERALS, getArrayLiteral());
+		JsLiterals.record(allocator.getProgram(), result, JsLiterals.OBJECT_LITERALS, getObjectLiteral());
 		return result;
 	}
 	
 	public String getName() {
 		return name;
+	}
+
+	/** These elements as an array literal. */
+	public String getArrayLiteral() {
+		return JsLiterals.array(items, pointerSize);
+	}
+
+	/** This object literal boilerplate (key/value pairs) as an object literal. */
+	public String getObjectLiteral() {
+		return JsLiterals.object(items, pointerSize);
 	}
 
 	@Override

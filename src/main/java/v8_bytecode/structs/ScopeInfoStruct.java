@@ -18,6 +18,7 @@ import ghidra.util.exception.DuplicateNameException;
 import ghidra.util.task.TaskMonitor;
 import v8_bytecode.ReservObject;
 import v8_bytecode.RootObject;
+import v8_bytecode.RootStrings;
 import v8_bytecode.ScopeInfoFlags;
 import v8_bytecode.allocator.IAllocatable;
 import v8_bytecode.allocator.ObjectsAllocator;
@@ -100,7 +101,7 @@ public final class ScopeInfoStruct implements IAllocatable {
 				final Object param = obj.getAlignedObject(offset);
 				
 				if (param instanceof RootObject) {
-					params.add(((RootObject)param).getName());
+					params.add(RootStrings.jsName((RootObject) param));
 				} else {
 					params.add((String)allocator.prepareForAlloc(param));
 				}
@@ -122,7 +123,7 @@ public final class ScopeInfoStruct implements IAllocatable {
 				
 				if (stackObj instanceof RootObject)	{
 					s.add(allocator.getEnumDataTypes().getRoots(), -1, String.format("StackLocal%d", i + 1), null);
-					stackLocalsStr.add(((RootObject)stackObj).getName());
+					stackLocalsStr.add(RootStrings.jsName((RootObject) stackObj));
 				} else {
 					s.add(new PointerDataType(CharDataType.dataType), -1, String.format("StackLocal%d", i + 1), null);
 					stackLocalsStr.add((String)allocator.prepareForAlloc(stackObj));
@@ -143,7 +144,7 @@ public final class ScopeInfoStruct implements IAllocatable {
 				
 				String _name;
 				if (ctxLocal instanceof RootObject) {
-					_name = ((RootObject)ctxLocal).getName();
+					_name = RootStrings.jsName((RootObject) ctxLocal);
 				} else {
 					_name = (String) allocator.convertReservObject((ReservObject)ctxLocal);
 				}
@@ -165,9 +166,11 @@ public final class ScopeInfoStruct implements IAllocatable {
 		}
 		
 		if (scopeFlags.hasFunctionVar()) {
-			funcVar = new ScopeInfoReceiver(obj.getInt(offset), (String)obj.getAlignedObject(offset + pointerSize), "Var", index, allocator);
+			// FunctionNameInfo occupies two slots: the variable's name, then its slot index.
+			final String funcVarName = allocator.convertString(obj.getAlignedObject(offset));
+			funcVar = new ScopeInfoReceiver(obj.getInt(offset + pointerSize), funcVarName, "Var", index, allocator);
 			s.add(funcVar.toDataType(), -1, "FuncVar", null);
-			offset += pointerSize;
+			offset += 2 * pointerSize;
 		} else {
 			funcVar = null;
 		}

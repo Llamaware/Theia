@@ -25,63 +25,23 @@ public class V8_InjectJSCallN extends V8_InjectPayload {
 
 	@Override
 	public PcodeOp[] getPcode(Program program, InjectContext context) {
-		Integer callerParamsCount;
-		Integer argIndex = 0;
-		Integer callerArgIndex = 0;
-
 		V8_PcodeOpEmitter pCode = new V8_PcodeOpEmitter(language, context.baseAddr, uniqueBase);
 		Address opAddr = context.baseAddr;
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		// get arguments from slaspec, definition in cspec
-		Integer argcount = (int) context.inputlist.get(0).getOffset();
-		Integer receiver = (int) context.inputlist.get(1).getOffset();
-
-		ArrayList<Object> opArrList = new ArrayList<Object>();
-		for (int i = 0; i < argcount; i++) {
-			opArrList.add(instruction.getOpObjects(i + receiver + 1)[0]);
+		int argcount = (int) context.inputlist.get(0).getOffset();
+		int receiver = (int) context.inputlist.get(1).getOffset();
+		// operand 0 is the callable; the receiver (if passed) and the arguments follow in source order
+		String[] args = new String[argcount + (receiver == RECV_ARG ? 1 : 0)];
+		for (int i = 0; i < args.length; i++) {
+			args[i] = instruction.getRegister(i + 1).getName();
 		}
-		// PcodeOp[] p = instruction.getPcode();
-		Object[] opObjects = opArrList.toArray();
-		try {
-			callerParamsCount = program.getListing().getFunctionContaining(opAddr).getParameterCount();
-		} catch (Exception e) {
-			callerParamsCount = 0;
-		}
-		// get caller args count to save only necessary ones
-		// it does not match the logic of the node.exe but important for output quality
-		if (callerParamsCount > opObjects.length) {
-			callerParamsCount = opObjects.length;
-		}
-		for (; callerArgIndex < callerParamsCount; callerArgIndex++) {
-			pCode.emitPushCat1Value("a" + callerArgIndex);
-		}
-		// save instruction operands in locals
-		argIndex = opObjects.length;
-		for (Object o : opObjects) {
-			argIndex--;
-			Register currentOp = (Register) o;
-			String invokeTmp = "invoke_tmp_" + "a" + argIndex;
-			pCode.emitAssignVarnodeFromVarnode(invokeTmp, currentOp.toString(), 4);
-		}
-		// writing locals into aX registers to avoid mixing up arguments
-		argIndex = opObjects.length;
-		for (int i = 0; i < opObjects.length; i++) {
-			argIndex--;
-			//Register currentOp = (Register) o;
-			String invokeTmp = "invoke_tmp_" + "a" + argIndex;
-			pCode.emitAssignVarnodeFromVarnode("a" + argIndex, invokeTmp, 4);
-		}
-		// make call
-		pCode.emitVarnodeCall(instruction.getRegister(0).toString(), 4);
-
-		while (callerArgIndex > 0) {
-			callerArgIndex--;
-			pCode.emitPopCat1Value("a" + callerArgIndex);
-		}
-		if (receiver == 1) {
-			Register currentOp = (Register) instruction.getOpObjects(1)[0];
-			pCode.emitAssignVarnodeFromVarnode(currentOp.toString(), "acc", 4);
-		}
+		emitCallArgs(pCode, args);
+		pCode.emitVarnodeCall(instruction.getRegister(0).getName(), 4);
 		return pCode.getPcodeOps();
 	}
 
@@ -101,11 +61,7 @@ public class V8_InjectJSCallN extends V8_InjectPayload {
 		return false;
 	}
 	
-	@Override
-	public boolean isErrorPlaceholder() {
-		return true;
-	}
-	@Override	
+@Override	
 	public boolean isEquivalent(InjectPayload obj) {
 		if (this.getClass() != obj.getClass()) {
 			return false;

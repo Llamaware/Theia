@@ -57,6 +57,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import ghidra.program.model.symbol.Reference;
+import ghidra.program.model.pcode.JumpTable;
+import ghidra.program.model.address.AddressSet;
+import ghidra.program.database.function.OverlappingFunctionException;
+import java.util.HashMap;
+import ghidra.program.model.listing.LocalVariableImpl;
+import ghidra.program.model.listing.Variable;
+import ghidra.util.exception.DuplicateNameException;
+import ghidra.util.exception.InvalidInputException;
 
 public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 	
@@ -144,10 +153,11 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 
 		final String _context = "_context";
 		ScopeInfoStore currentScope = null;
+		final List<Object[]> slotAccesses = new ArrayList<>();
 		
 		AddressIterator fiter = set.getAddresses(true);
 		
-		int switchNum = 0;
+		final List<Object[]> switchTables = new ArrayList<>();
 
 		while (fiter.hasNext()) {
 			if (monitor.isCancelled()) {
@@ -156,25 +166,28 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 			
 			final Address addr = fiter.next();
 
+			Instruction instruction = listing.getInstructionAt(addr);
+		
+			if (instruction == null) {
+				continue;
+			}
+
 			Function func = mgr.getFunctionContaining(addr);
 			
 			if (func != null) {
 				final String logString = String.format("Applying references for \"%s\"", func.getName());
 				monitor.setMessage(logString);
 			}
-
-			Instruction instruction = listing.getInstructionAt(addr);
-		
-			if (instruction == null) {
-				continue;
-			}
 		
 			String mnemonic = trimMnemonic(instruction.getMnemonicString());
+			// V8 jump targets are relative to the bytecode after a Wide/ExtraWide prefix
+			final int prefixOffset = mnemonic.equals(instruction.getMnemonicString()) ? 0 : 1;
 			
 			// System.out.println(String.format("0x%08X - %s", addr.getOffset(), instruction));
 			
-			log2.appendMsg(String.format("0x%08X - %s", addr.getOffset(), instruction));
-			log2.appendMsg("mnemonic: " + mnemonic);
+			if (LogWriter.isDebug()) {
+				log2.appendMsg(String.format("0x%08X - %s", addr.getOffset(), instruction));
+			}
 			if (hasConstantPoolReference(mnemonic)) {
 				for (int opIndex : CP_FUNCS.get(mnemonic)) {
 					int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
@@ -193,24 +206,6 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							
 							log2.appendMsg("enumName: " + enumName);
 							
-							switch(enumName) {
-							case "Abort": {
-								patchWithNop(instruction, 2, 2, "ldasmi", "star", true, fpa, log);
-							} break;
-							case "_GeneratorGetContext": {
-								patchWithNop(instruction, 2, 3, "ldar", "star", true, fpa, log);
-							} break;
-							case "_CreateJSGeneratorObject": {
-								patchWithNop(instruction, 2, 1, "mov", "star", true, fpa, log);
-							} break;
-							case "_GeneratorGetInputOrDebugPos": {
-								patchWithNop(instruction, 5, 0, "suspendgenerator", "invokeintrinsic", true, fpa, log);
-							} break;
-							case "_GeneratorGetResumeMode": {
-								patchWithNop(instruction, 0, 0, "invokeintrinsic", "invokeintrinsic", true, fpa, log);
-							} break;
-							}
-							
 							if (!mnemonic.equals("InvokeIntrinsic")) {
 								setEnumOperand(program, RuntimesEnum.NAME, addr, opIndex, index);
 							} else {
@@ -227,18 +222,24 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							}
 						} break;
 						case "CreateBlockContext": {
-							currentScope = (ScopeInfoStore) funcsStorage.getConstItem(addr, index);
+							final Object scopeItem = funcsStorage.getConstItem(addr, index);
+							currentScope = (scopeItem instanceof ScopeInfoStore) ? (ScopeInfoStore) scopeItem : null;
 
-							final Address itemAddr = fpa.toAddr(funcsStorage.getConstItemAddress(addr, index));
-							instruction.addOperandReference(opIndex, itemAddr, RefType.DATA, SourceType.ANALYSIS);
+							final long itemOffset = funcsStorage.getConstItemAddress(addr, index);
+							if (itemOffset >= 0) {
+								instruction.addOperandReference(opIndex, fpa.toAddr(itemOffset), RefType.DATA, SourceType.ANALYSIS);
+							}
 						} break;
 						case "CreateCatchContext": {
 							if (opIndex == 2) {
-								currentScope = (ScopeInfoStore) funcsStorage.getConstItem(addr, index);
+								final Object scopeItem = funcsStorage.getConstItem(addr, index);
+								currentScope = (scopeItem instanceof ScopeInfoStore) ? (ScopeInfoStore) scopeItem : null;
 							}
 
-							final Address itemAddr = fpa.toAddr(funcsStorage.getConstItemAddress(addr, index));
-							instruction.addOperandReference(opIndex, itemAddr, RefType.DATA, SourceType.ANALYSIS);
+							final long itemOffset = funcsStorage.getConstItemAddress(addr, index);
+							if (itemOffset >= 0) {
+								instruction.addOperandReference(opIndex, fpa.toAddr(itemOffset), RefType.DATA, SourceType.ANALYSIS);
+							}
 						} break;
 						case "SwitchOnSmiNoFeedback": {
 							int itemsCount = (int) (instruction.getScalar(opIndex + 1).getValue() & 0xFFFFFFFF);
@@ -249,10 +250,14 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 								
 								final Address refAddr;
 								
+								if (!(item instanceof Integer) && !(item instanceof Long)) {
+									log2.appendMsg("Unresolved switch table entry " + (index + ic) + " at " + addr);
+									continue;
+								}
 								if (item instanceof Integer) {
-									refAddr = addr.add(NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
+									refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
 								} else { // item instanceof Long
-									refAddr = addr.add(NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
+									refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
 								}
 								
 								refs.add(refAddr);
@@ -260,41 +265,8 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 								ObjectsAllocator.disassemble(program, TaskMonitor.DUMMY, refAddr);
 							}
 							
-							switch (switchNum) {
-							case 0:
-								patchWithNop(instruction, 0, 0, "switchonsminofeedback", "switchonsminofeedback", true, fpa, log);
-								switchNum = 1;
-								break;
-							case 1: {
-								if (!patchWithNop(instruction, 0, 1, "switchonsminofeedback", "jump", false, fpa, log)) {
-									patchWithNop(instruction, 0, 4, "switchonsminofeedback", "return", false, fpa, log);
-								}
-								
-								if (itemsCount >= 3) {
-									instruction = fpa.getInstructionAt(refs.get(0));
-									final Address dis = instruction.getAddress();
-									while (instruction.getAddress().getOffset() < refs.get(1).getOffset()) {
-										nopInstruction(instruction, fpa, log);
-										instruction = instruction.getNext();
-									}
-									ObjectsAllocator.disassemble(program, monitor, dis);
-									
-									instruction = fpa.getInstructionAt(refs.get(refs.size() - 1));
-									while (true) {
-										nopInstruction(instruction, fpa, log);
-										
-										if (instruction.getMnemonicString().equalsIgnoreCase("return")) {
-											break;
-										}
-										
-										instruction = instruction.getNext();
-									}
-									ObjectsAllocator.disassemble(program, monitor, refs.get(refs.size() - 1));
-								}
-								
-								switchNum = 0;
-							} break;
-							}
+							// written by writeSwitchTables once the owning function is known
+							switchTables.add(new Object[] { addr, refs });
 						} break;
 						default: {
 						    long constItemAddr = funcsStorage.getConstItemAddress(addr, index);
@@ -318,77 +290,27 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 						refType = RefType.WRITE;
 					}
 
-					ContextVarStore var = null;
 					switch (mnemonic) {
 					case "CreateFunctionContext": {
 						currentScope = funcsStorage.getScopeInfo(addr, _context);
-						instruction.addOperandReference(opIndex, fpa.toAddr(currentScope.getOffset()), refType, SourceType.ANALYSIS);
-					} break;
-					default: {
-						try {
-							final ScopeInfoStore scope;
-							
-							if (mnemonic.contains("Current")) {
-								scope = funcsStorage.getScopeInfo(addr, _context);
-								if (scope != null) {
-									var = scope.getContextVar(index);
-								}
-								else {
-									log2.appendMsg("scope is null, skipping var " + index + " in " + mnemonic);
-								}
-							}
-							else {
-								final Register reg = instruction.getRegister(0);
-								int depth = (int) (instruction.getScalar(opIndex + 1).getValue() & 0xFFFFFFFF);
-								scope = funcsStorage.getScopeInfo(addr, reg.getName());
-								if (scope != null) {
-									var = scope.getContextVar(index, depth);
-								} else {
-									log2.appendMsg("scope is null, skipping var " + index + " in " + mnemonic);
-								}
-							}
-							
-							if (var != null) {
-								instruction.addOperandReference(opIndex, fpa.toAddr(var.getAddress()), refType, SourceType.ANALYSIS);
-							}
-							
-							InstructionsStorage.create(program, addr.getOffset(), scope);
-						} catch (Exception e) {
-							e.printStackTrace();
-							log2.appendException(e);
+						if (currentScope != null) {
+							instruction.addOperandReference(opIndex, fpa.toAddr(currentScope.getOffset()), refType, SourceType.ANALYSIS);
 						}
-					}
+					} break;
+					default:
+						// resolved by resolveContextSlot once all code is disassembled
+						slotAccesses.add(new Object[] { addr, opIndex, refType });
+						break;
 					}
 				}
 			} else if (isContextChanger(mnemonic)) {
-				switch (mnemonic) {
-				case "PushContext": {
-					final Register reg = instruction.getRegister(0);
-					funcsStorage.pushScopeInfo(addr, reg.getName(), currentScope);
-				} break;
-				case "PopContext": {
-					final Register reg = instruction.getRegister(0);
-					currentScope = funcsStorage.popScopeInfo(addr, reg.getName());
-				} break;
-				}
+				// PushContext/PopContext are modelled by ContextTracker
 			} else if (isJsRuntimeCaller(mnemonic)) {
 				for (int opIndex : JSRUN_CALLS.get(mnemonic)) {
 					int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
 
-					Enum jsRun = (Enum)setEnumOperand(program, JsRuntimesEnum.NAME, addr, opIndex, index);
-					
-					switch (jsRun.getName(index)) {
-					case "async_function_promise_release": {
-						patchWithNop(instruction, 35, 3, "jump", "ldar", true, fpa, log);
-					} break;
-					case "async_function_promise_create": {
-						patchWithNop(instruction, 3, 3, "stackcheck", "mov", true, fpa, log);
-					} break;
-					case "promise_resolve": {
-						patchWithNop(instruction, 0, 0, "calljsruntime", "calljsruntime", true, fpa, log);
-					} break;
-					}
+					setEnumOperand(program, JsRuntimesEnum.NAME, addr, opIndex, index);
 				}
 			} else if (testsType(mnemonic)) {
 				for (int opIndex : TYPEOFS.get(mnemonic)) {
@@ -408,6 +330,10 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
 					
 					final Object item = funcsStorage.getConstItem(addr, index);
+					if (!(item instanceof Integer) && !(item instanceof Long)) {
+						log2.appendMsg("Unresolved jump offset constant " + index + " at " + addr);
+						continue;
+					}
 					
 					int pointerSize = ObjectsAllocator.getPointerSize(program);
 					log2.appendMsg("Pointer size: " + pointerSize);
@@ -423,9 +349,9 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 					final Address refAddr;
 					
 					if (item instanceof Integer) {
-						refAddr = addr.add(NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
+						refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
 					} else { // item instanceof Long
-						refAddr = addr.add(NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
+						refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
 					}
 					
 					boolean jumpConst = mnemonic.equals("JumpConstant");
@@ -450,61 +376,204 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 			}
 		}
 
+		fixFunctionBodies(program);
+		writeSwitchTables(program, switchTables);
+
+		// Always the whole program: a closure's context comes from whichever function creates it,
+		// and later passes only cover the code they added.
+		final ContextTracker contexts = slotAccesses.isEmpty() ? null
+				: new ContextTracker(program, funcsStorage, program.getMemory(), monitor);
+		for (final Object[] access : slotAccesses) {
+			resolveContextSlot(program, fpa, contexts, (Address) access[0], (int) access[1], (RefType) access[2]);
+		}
+
+		for (final Function f : mgr.getFunctions(set, true)) {
+			anchorRegisterLocals(program, f);
+		}
+
 		monitor.setIndeterminate(false);
 
 		return true;
 	}
-	
-	private boolean patchWithNop(final Instruction instr, int toLeft, int toRight, final String left, final String right, boolean throwExceptions, final FlatProgramAPI fpa, MessageLog log) throws CancelledException {
-		final List<Instruction> toRemove = new ArrayList<>();
-		
-		toRemove.add(instr);
-		
-		Instruction instruction = instr;
-		for (int i = 0; i < toLeft; ++i) {
-			instruction = instruction.getPrevious();
-			toRemove.add(0, instruction);
+
+	/** Points a context-slot operand at the context variable it accesses. */
+	private void resolveContextSlot(final Program program, final FlatProgramAPI fpa, final ContextTracker contexts,
+			final Address addr, int opIndex, final RefType refType) {
+		final Instruction instruction = program.getListing().getInstructionAt(addr);
+		if (instruction == null) {
+			return;
 		}
-		
-		instruction = instr;
-		for (int i = 0; i < toRight; ++i) {
-			instruction = instruction.getNext();
-			toRemove.add(instruction);
+		final int index = (int) (instruction.getScalar(opIndex).getValue() & 0xFFFFFFFF);
+		final ScopeInfoStore scope = contexts.getSlotScope(addr);
+		if (scope == null) {
+			log2.appendMsg("No context scope for " + instruction + " at " + addr);
+			return;
 		}
-		
-		if (!left.isEmpty() && !toRemove.get(0).getMnemonicString().equalsIgnoreCase(left)) {
-			if (throwExceptions) {
-				log.appendException(new Exception(String.format("Check patchWithNop() at %s", instr.getAddress())));
+		final ContextVarStore var = scope.getContextVar(index);
+		if (var != null) {
+			instruction.addOperandReference(opIndex, fpa.toAddr(var.getAddress()), refType, SourceType.ANALYSIS);
+		} else if (index >= 4) { // slots 0-3 are the context header, named by V8_ConstantPool
+			log2.appendMsg("No context variable " + index + " for " + instruction + " at " + addr + " in " + scope.getName());
+		}
+		InstructionsStorage.create(program, addr.getOffset(), scope);
+	}
+
+	/**
+	 * The loader creates each named stack local as a register variable with first use 0. The
+	 * decompiler binds a variable only to the value defined exactly at its first-use address, and
+	 * "Star rN" is a plain copy of acc that copy propagation deletes. So name the value that is
+	 * stored instead: acc as defined by the instruction producing it, or by the merge at the start
+	 * of its block. Stores of constants and copies are skipped because the decompiler folds them
+	 * away; a loop counter is then named through its increment, which feeds the loop's merge.
+	 * Registers written directly by an instruction other than Star/Mov keep a register anchor.
+	 */
+	private void anchorRegisterLocals(final Program program, final Function func) {
+		final Register acc = program.getRegister("acc");
+		final List<Instruction> code = ContextTracker.instructions(program, func);
+
+		final Map<Register, List<Integer>> stores = new HashMap<>();
+		for (int i = 0; i < code.size(); ++i) {
+			for (final Object o : code.get(i).getResultObjects()) {
+				if (o instanceof Register && !o.equals(acc)) {
+					stores.computeIfAbsent((Register) o, r -> new ArrayList<>()).add(i);
+				}
 			}
+		}
+
+		for (final Variable var : func.getLocalVariables()) {
+			final Register reg = var.getRegister();
+			if (reg == null || !stores.containsKey(reg)) {
+				continue;
+			}
+			Register storage = null;
+			Instruction def = null;
+			for (final int store : stores.get(reg)) {
+				final String mnemonic = trimMnemonic(code.get(store).getMnemonicString());
+				if (mnemonic.equals("Mov")) {
+					continue;
+				}
+				if (!mnemonic.equals("Star")) {
+					storage = reg;
+					def = code.get(store);
+					break;
+				}
+				final Instruction producer = accProducer(program, code, store);
+				if (producer != null && !isConstantOrCopy(producer)) {
+					storage = acc;
+					def = producer;
+					break;
+				}
+			}
+			if (def == null) {
+				continue;
+			}
+			final int use = (int) def.getAddress().subtract(func.getEntryPoint());
+			if (storage.equals(reg) && use == var.getFirstUseOffset()) {
+				continue;
+			}
+			try {
+				final LocalVariableImpl moved = new LocalVariableImpl(var.getName(), use, var.getDataType(), storage, program);
+				func.removeVariable(var);
+				func.addLocalVariable(moved, var.getSource());
+			} catch (InvalidInputException | DuplicateNameException e) {
+				log2.appendMsg("Cannot move local " + var.getName() + " in " + func.getName() + ": " + e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * @return the instruction whose acc value the Star at {@code store} writes: the closest earlier
+	 * acc writer, or the instruction starting the block when control merges first (where the
+	 * decompiler places the merge); null when acc is not defined in the function.
+	 */
+	private static Instruction accProducer(final Program program, final List<Instruction> code, final int store) {
+		for (int j = store; j >= 0; --j) {
+			final Instruction ins = code.get(j);
+			if ((j < store && writesAcc(ins)) || isBranchTarget(program, ins.getAddress())) {
+				return ins;
+			}
+		}
+		return null;
+	}
+
+	/** True if a jump lands here, so the value in acc may be a merge of several definitions. */
+	private static boolean isBranchTarget(final Program program, final Address addr) {
+		for (final Reference ref : program.getReferenceManager().getReferencesTo(addr)) {
+			if (ref.getReferenceType().isFlow()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** V8 bytecodes that leave the accumulator unchanged. */
+	private static boolean writesAcc(final Instruction ins) {
+		final String m = trimMnemonic(ins.getMnemonicString());
+		return !(m.startsWith("Sta") || m.startsWith("Jump") || m.equals("Mov") || m.equals("StackCheck")
+				|| m.equals("PushContext") || m.equals("PopContext") || m.equals("Nop") || m.equals("Debugger"));
+	}
+
+	/** Loads of a constant or of another register into acc, which the decompiler propagates away. */
+	private static boolean isConstantOrCopy(final Instruction ins) {
+		switch (trimMnemonic(ins.getMnemonicString())) {
+		case "LdaZero":
+		case "LdaSmi":
+		case "LdaConstant":
+		case "LdaUndefined":
+		case "LdaNull":
+		case "LdaTheHole":
+		case "LdaTrue":
+		case "LdaFalse":
+		case "Ldar":
+			return true;
+		default:
 			return false;
 		}
-		
-		if (!right.isEmpty() && !toRemove.get(toRemove.size() - 1).getMnemonicString().equalsIgnoreCase(right)) {
-			if (throwExceptions) {
-				log.appendException(new Exception(String.format("Check patchWithNop() at %s", instr.getAddress())));
-			}
-			return false;
-		}
-		
-		for (final Instruction inst : toRemove) {
-			nopInstruction(inst, fpa, log);
-		}
-		
-		ObjectsAllocator.disassemble(fpa.getCurrentProgram(), TaskMonitor.DUMMY, toRemove.get(0).getAddress());
-		return true;
 	}
 	
-	private void nopInstruction(final Instruction inst, final FlatProgramAPI fpa, final MessageLog log) throws CancelledException {
-		fpa.setEOLComment(inst.getAddress(), inst.toString());
-		fpa.clearListing(inst.getAddress());
-		
-		try {
-			byte[] fill = new byte[inst.getLength()];
-			Arrays.fill(fill, (byte)0xA8);
-			fpa.setBytes(inst.getAddress(), fill);
-		} catch (MemoryAccessException e) {
-			e.printStackTrace();
-			log.appendException(e);
+	/**
+	 * The loader creates the functions before their code is disassembled, so on the first pass
+	 * their bodies are only the entry point. Grow each one to the code its control flow reaches.
+	 */
+	private void fixFunctionBodies(final Program program) {
+		for (final Function f : program.getFunctionManager().getFunctions(true)) {
+			final AddressSet body = new AddressSet();
+			for (final Instruction ins : ContextTracker.instructions(program, f)) {
+				body.add(ins.getMinAddress(), ins.getMaxAddress());
+			}
+			if (body.isEmpty() || body.equals(f.getBody())) {
+				continue;
+			}
+			try {
+				f.setBody(body);
+			} catch (OverlappingFunctionException e) {
+				log2.appendMsg("Cannot extend " + f.getName() + ": " + e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * Gives each SwitchOnSmiNoFeedback its targets as a decompiler jump table override: the table
+	 * lives in the constant pool, where the decompiler cannot recover it from the p-code. Functions
+	 * are looked up through Theia's own ranges, since the first pass runs before Ghidra has grown
+	 * the function bodies.
+	 */
+	@SuppressWarnings("unchecked")
+	private void writeSwitchTables(final Program program, final List<Object[]> tables) {
+		for (final Object[] table : tables) {
+			final Address addr = (Address) table[0];
+			final List<Address> targets = (List<Address>) table[1];
+			final long entry = funcsStorage.getFunctionOffset(addr);
+			final Function func = (entry >= 0) ? program.getFunctionManager().getFunctionAt(addr.getNewAddress(entry)) : null;
+			if (func == null || targets.isEmpty()) {
+				log2.appendMsg("No jump table for the switch at " + addr);
+				continue;
+			}
+			try {
+				new JumpTable(addr, new ArrayList<>(targets), true, 0).writeOverride(func);
+			} catch (InvalidInputException e) {
+				log2.appendMsg("Cannot write the jump table at " + addr + ": " + e.getMessage());
+			}
 		}
 	}
 	

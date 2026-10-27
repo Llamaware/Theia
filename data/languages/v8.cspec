@@ -30,8 +30,10 @@
 	<default_proto>
 		<prototype name="__stdcall" extrapop="0" stackshift="0">
 			<input>
-				<pentry minsize="1" maxsize="500" align="4" extension="inttype">
-					<addr offset="0x14000" space="register"/>
+				<!-- outgoing-argument bank o0..o127 (receiver first, then arguments in source order);
+				     function parameters use custom storage on a0..aN instead -->
+				<pentry minsize="1" maxsize="512" align="4" extension="inttype">
+					<addr offset="0x16000" space="register"/>
 				</pentry>
 			</input>
 			<output>
@@ -41,7 +43,15 @@
 			</output>
 			<unaffected>
 				<register name="sp"/>
+				<register name="_context"/>
+				<register name="_closure"/>
+				<!-- a JS call never touches the caller's parameter and register files -->
+				<varnode space="register" offset="0x14000" size="504"/>
+				<varnode space="register" offset="0x3000" size="496"/>
 			</unaffected>
+			<killedbycall>
+				<varnode space="register" offset="0x16000" size="512"/>
+			</killedbycall>
 		</prototype>
 	</default_proto>
 	<callotherfixup targetop="CallVariadicCallOther">
@@ -73,7 +83,6 @@
 	<callotherfixup targetop="ThrowCallOther">
 		<pcode dynamic="true">
 			<input name="condition"/>
-			<input name="runtimeid"/>
 		</pcode>
 	</callotherfixup>
 	<callotherfixup targetop="CallJSRuntimeCallOther">

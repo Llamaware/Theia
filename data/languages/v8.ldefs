@@ -12,15 +12,4 @@
     <description>V8</description>
     <compiler name="default" spec="v8.cspec" id="default"/>
   </language>
-    <language processor="V8 bytecode"
-            endian="little"
-            size="32"
-            variant="x64"
-            version="1.0"
-            slafile="v8.sla"
-            processorspec="v8.pspec"
-            id="V8:LE:64:default">
-    <description>V8</description>
-    <compiler name="default" spec="v8.cspec" id="default"/>
-  </language>
 </language_definitions>

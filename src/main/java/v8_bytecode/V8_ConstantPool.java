@@ -1,5 +1,7 @@
 package v8_bytecode;
 
+import java.nio.charset.StandardCharsets;
+
 import ghidra.program.model.lang.ConstantPool;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
@@ -8,6 +10,10 @@ import v8_bytecode.allocator.ObjectsAllocator;
 import v8_bytecode.enums.RootsEnum;
 import v8_bytecode.enums.TypeOfEnum;
 import v8_bytecode.storage.ArrayStore;
+import v8_bytecode.storage.TupleStore;
+import v8_bytecode.structs.JsLiterals;
+import ghidra.program.model.listing.Instruction;
+import ghidra.program.model.mem.MemoryAccessException;
 import v8_bytecode.storage.RuntimesIntrinsicsStore;
 import v8_bytecode.storage.ScopeInfoStore;
 import v8_bytecode.storage.SharedFunctionStore;
@@ -25,6 +31,35 @@ public class V8_ConstantPool extends ConstantPool {
 	
 	private final FlatProgramAPI fpa;
 	private final DataTypeManager mgr;
+
+	/** JS text of a literal boilerplate used by the CreateObjectLiteral/CreateArrayLiteral at {@code address}. */
+	private String literalAt(long address, int index) {
+		final Instruction ins = fpa.getInstructionAt(fpa.toAddr(address));
+		final String mnemonic = (ins != null) ? ins.getMnemonicString() : "";
+		final String map = mnemonic.startsWith("CreateObjectLiteral") ? JsLiterals.OBJECT_LITERALS
+				: mnemonic.startsWith("CreateArrayLiteral") ? JsLiterals.ARRAY_LITERALS : null;
+		final long slot = funcsStorage.getConstItemAddress(fpa.toAddr(address), index);
+		if (map == null || slot < 0) {
+			return null;
+		}
+		try {
+			// the constant pool slot holds a pointer to the allocated boilerplate
+			final long target = fpa.getCurrentProgram().getMemory().getInt(fpa.toAddr(slot)) & 0xFFFFFFFFL;
+			return JsLiterals.lookup(fpa.getCurrentProgram(), target, map);
+		} catch (MemoryAccessException e) {
+			return null;
+		}
+	}
+
+	/** The fixed slots at the start of every V8 6.5 context. */
+	private static final String[] CONTEXT_HEADER = { "closure", "previous", "extension", "native_context" };
+
+	/** A number printed verbatim as its token, for values that do not fit a 4-byte constant. */
+	private static void setTokenRecord(Record res, String token) {
+		res.tag = ConstantPool.POINTER_FIELD;
+		res.type = IntegerDataType.dataType;
+		res.token = token;
+	}
 
 	public V8_ConstantPool(Program program) {
 		fpa = new FlatProgramAPI(program);
@@ -53,24 +88,23 @@ public class V8_ConstantPool extends ConstantPool {
 			if (cpItem instanceof String) {
 				res.tag = ConstantPool.STRING_LITERAL;
 				res.type = new PointerDataType(CharDataType.dataType);
-				res.byteData = ((String)cpItem).getBytes();
+				res.byteData = ((String)cpItem).getBytes(StandardCharsets.UTF_8);
 			} else if (cpItem instanceof Integer) {
 		          res.tag = ConstantPool.PRIMITIVE;
 		          res.type = IntegerDataType.dataType;
 		          res.value = (Integer)cpItem;
 		          res.token = "int";
 			} else if (cpItem instanceof Long) {
-		          res.tag = ConstantPool.PRIMITIVE;
-		          res.type = LongLongDataType.dataType;
-		          res.value = (Long)cpItem;
-		          res.token = "longlong";
+				// operands are 4 bytes wide, so 8-byte values are printed as tokens
+				setTokenRecord(res, Long.toString((Long) cpItem));
 			} else if (cpItem instanceof Double) {
-				res.tag = ConstantPool.PRIMITIVE;
-				res.type = DoubleDataType.dataType;
-
-				final int[] halfs = ObjectsAllocator.doubleToInts((Double)cpItem);
-				res.value = (((long)halfs[1]) << 32 ) + (halfs[0] & 0xffffffffL);
-				res.token = "double";
+				final double d = (Double) cpItem;
+				setTokenRecord(res, d == Math.rint(d) && !Double.isInfinite(d) && Math.abs(d) < 1e21
+						? Long.toString((long) d) : Double.toString(d));
+			} else if (cpItem instanceof RootObject && RootStrings.get(((RootObject) cpItem).getName()) != null) {
+				res.tag = ConstantPool.STRING_LITERAL;
+				res.type = new PointerDataType(CharDataType.dataType);
+				res.byteData = RootStrings.get(((RootObject) cpItem).getName()).getBytes(StandardCharsets.UTF_8);
 			} else if (cpItem instanceof RootObject) {
 				res.tag = ConstantPool.PRIMITIVE;
 				res.type = mgr.getRootCategory().getDataType(RootsEnum.NAME);
@@ -88,10 +122,15 @@ public class V8_ConstantPool extends ConstantPool {
 			        log.appendMsg("Found function: " + func.getName() + " at address: " + funcAddr);
 			        res.token = func.getName();
 			    }
+			    res.tag = ConstantPool.POINTER_METHOD;
 			    // Ensure that type is not null
 			    if (res.type == null) {
 			         res.type = new PointerDataType(VoidDataType.dataType);
 			    }
+			}
+			else if ((cpItem instanceof ArrayStore || cpItem instanceof TupleStore) && literalAt(address, index) != null) {
+				setTokenRecord(res, literalAt(address, index));
+				res.type = new PointerDataType(VoidDataType.dataType);
 			}
 			else if (cpItem instanceof ArrayStore){
 				res.tag = ConstantPool.POINTER_FIELD;
@@ -113,6 +152,12 @@ public class V8_ConstantPool extends ConstantPool {
 			res.token = (indexType == 1) ? runsIntrsStore.getIntrinsicName(index) : runsIntrsStore.getRuntimeName(index);
 		} break;
 		case 3: { // context slot
+		    if (index < CONTEXT_HEADER.length) { // Context::MIN_CONTEXT_SLOTS in V8 6.5
+		        res.tag = ConstantPool.POINTER_FIELD;
+		        res.type = new PointerDataType(VoidDataType.dataType);
+		        res.token = CONTEXT_HEADER[index];
+		        break;
+		    }
 		    final InstructionsStorage instrStorage = InstructionsStorage.load(fpa.getCurrentProgram(), address);
 		    
 		    if (instrStorage == null) {
@@ -135,13 +180,14 @@ public class V8_ConstantPool extends ConstantPool {
 		        log.appendMsg("Warning: instrStorage.getScopeInfo() returned null");
 		    }
 		} break;
-		case 4: {
+		case 4: { // TestTypeOf literal: compared with the result of typeof, so its string
 			final Enum typeOf = (Enum) mgr.getRootCategory().getDataType(TypeOfEnum.NAME);
-			
-			res.tag = ConstantPool.PRIMITIVE;
-			res.type = typeOf;
-			res.value = index;
-			res.token = typeOf.getName(index);
+			final String name = typeOf.getName(index);
+			if (name != null) {
+				res.tag = ConstantPool.STRING_LITERAL;
+				res.type = new PointerDataType(CharDataType.dataType);
+				res.byteData = name.toLowerCase().getBytes(StandardCharsets.UTF_8);
+			}
 		} break;
 		case 5: {
 			final Object cpItem = funcsStorage.getConstItem(fpa.toAddr(address), index);
@@ -149,8 +195,10 @@ public class V8_ConstantPool extends ConstantPool {
 			final long val;
 			if (cpItem instanceof Integer) {
 				val = NwjcParser.smiToInt((int)cpItem, ObjectsAllocator.getPointerSize(fpa.getCurrentProgram()));
-			} else { // item instanceof Long
-				val = NwjcParser.smiToInt((long)cpItem, ObjectsAllocator.getPointerSize(fpa.getCurrentProgram()));	
+			} else if (cpItem instanceof Long) {
+				val = NwjcParser.smiToInt((long)cpItem, ObjectsAllocator.getPointerSize(fpa.getCurrentProgram()));
+			} else {
+				break;
 			}
 			
 			res.tag = ConstantPool.PRIMITIVE;
@@ -159,7 +207,18 @@ public class V8_ConstantPool extends ConstantPool {
 	        res.token = "longlong";
 		} break;
 		}
-		LogWriter.writeLog(log, "cpool.log");
+		// DecompileCallback.getCPoolRef encodes the token and type of every record;
+		// a missing one crashes the decompile.
+		if (res.type == null) {
+			res.type = new PointerDataType(VoidDataType.dataType);
+		}
+		if (res.token == null) {
+			log.appendMsg(String.format("Unresolved constant pool item %d (type %d) at %04X", index, indexType, address));
+			res.token = String.format("cpool_%d", index);
+		}
+		if (LogWriter.isDebug()) {
+			LogWriter.writeLog(log, "cpool.log");
+		}
 		return res;
 	}
 }

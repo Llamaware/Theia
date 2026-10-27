@@ -149,74 +149,18 @@ public class V8_PcodeOpEmitter {
 	 * Emits pcode to push a value of computational category 1 onto the stack.
 	 * @param valueName - name of varnode to push.
 	 */
-	public void emitPushCat1Value(String valueName) {
-		Varnode[] in = new Varnode[2];
-		in[0] = spVarnode;
-		in[1] = getConstant(4, spVarnode.getSize());
-		PcodeOp op = new PcodeOp(opAddress, seqnum++, PcodeOp.INT_SUB, in, spVarnode);
-		opList.add(op);
-		in = new Varnode[3];
-		in[0] = defSpaceId;
-		in[1] = spVarnode;
-		in[2] = findRegister(valueName);
-		op = new PcodeOp(opAddress, seqnum++, PcodeOp.STORE, in);
-		opList.add(op);
-	}
-
 	/**
 	 * Emits pcode to push a value of computational category 2 onto the stack.
 	 * @param valueName - name of varnode to push.
 	 */
-	public void emitPushCat2Value(String valueName) {
-		Varnode[] in = new Varnode[2];
-		in[0] = spVarnode;
-		in[1] = getConstant(8, spVarnode.getSize());
-		PcodeOp op = new PcodeOp(opAddress, seqnum++, PcodeOp.INT_SUB, in, spVarnode);
-		opList.add(op);
-		in = new Varnode[3];
-		in[0] = defSpaceId;
-		in[1] = spVarnode;
-		in[2] = findRegister(valueName);
-		op = new PcodeOp(opAddress, seqnum++, PcodeOp.STORE, in);
-		opList.add(op);
-	}
-
 	/**
 	 * Emits pcode to pop a value of computational category 2 from the stack.
 	 * @param destName - name of destination varnode.
 	 */
-	public void emitPopCat2Value(String destName) {
-		Varnode out = findVarnode(destName, 8);
-		Varnode[] in = new Varnode[2];
-		in[0] = defSpaceId;
-		in[1] = spVarnode;
-		PcodeOp op = new PcodeOp(opAddress, seqnum++, PcodeOp.LOAD, in, out);
-		opList.add(op);
-		in = new Varnode[2];
-		in[0] = spVarnode;
-		in[1] = getConstant(8, spVarnode.getSize());
-		op = new PcodeOp(opAddress, seqnum++, PcodeOp.INT_ADD, in, spVarnode);
-		opList.add(op);
-	}
-
 	/**
 	 * Emits pcode to pop a value of computational category 1 from the stack.
 	 * @param destName - name of destination varnode.
 	 */
-	public void emitPopCat1Value(String destName) {
-		Varnode out = findVarnode(destName, 4);
-		Varnode[] in = new Varnode[2];
-		in[0] = defSpaceId;
-		in[1] = spVarnode;
-		PcodeOp op = new PcodeOp(opAddress, seqnum++, PcodeOp.LOAD, in, out);
-		opList.add(op);
-		in = new Varnode[2];
-		in[0] = spVarnode;
-		in[1] = getConstant(4, spVarnode.getSize());
-		op = new PcodeOp(opAddress, seqnum++, PcodeOp.INT_ADD, in, spVarnode);
-		opList.add(op);
-	}
-
 	/**
 	 * Emits pcode to assign four bytes resulting from a call to a black-box pcodeop
 	 * @param varnodeName - varnode name for holding result
@@ -469,6 +413,27 @@ public class V8_PcodeOpEmitter {
 		opList.add(op);
 	}
 	
+	public void emitBoolNegate(String dest, String src) {
+		Varnode in = findVarnode(src, 1);
+		PcodeOp op = new PcodeOp(opAddress, seqnum++, PcodeOp.BOOL_NEGATE, new Varnode[] { in }, findVarnode(dest, 1));
+		opList.add(op);
+	}
+
+	/** Branches to {@code target} when the 1-byte boolean {@code condition} is true. */
+	public void emitConditionalBranch(Address target, String condition) {
+		Varnode[] in = { new Varnode(target, 4), findVarnode(condition, 1) };
+		opList.add(new PcodeOp(opAddress, seqnum++, PcodeOp.CBRANCH, in));
+	}
+
+	/** Leaves the function, like the Return bytecode (whose p-code is "return [acc]"). */
+	public void emitReturn() {
+		opList.add(new PcodeOp(opAddress, seqnum++, PcodeOp.RETURN, new Varnode[] { accVarnode }));
+	}
+
+	public void emitBranch(Address target) {
+		opList.add(new PcodeOp(opAddress, seqnum++, PcodeOp.BRANCH, new Varnode[] { new Varnode(target, 4) }));
+	}
+
 	public void emitVarnodeCall(String target, int size) {
 		Varnode[] in = new Varnode[1];
 		in[0] = findVarnode(target, size);

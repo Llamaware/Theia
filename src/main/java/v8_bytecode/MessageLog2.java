@@ -51,7 +51,7 @@ public class MessageLog2 {
 	 * Copies the contents of one message log into this one
 	 * @param log the log to copy from
 	 */
-	public void copyFrom(MessageLog2 log) {
+	public synchronized void copyFrom(MessageLog2 log) {
 		for (String otherMessage : log.messages) {
 			add(otherMessage);
 		}
@@ -61,7 +61,7 @@ public class MessageLog2 {
 	 * Appends the message to the log
 	 * @param message the message
 	 */
-	public void appendMsg(String message) {
+	public synchronized void appendMsg(String message) {
 		add(message);
 	}
 
@@ -71,7 +71,7 @@ public class MessageLog2 {
 	 * @param originator the originator of the message 
 	 * @param message the message
 	 */
-	public void appendMsg(String originator, String message) {
+	public synchronized void appendMsg(String originator, String message) {
 		if (originator == null) {
 			add(message);
 		}
@@ -85,7 +85,7 @@ public class MessageLog2 {
 	 * @param lineNum the line number that generated the message
 	 * @param message the message
 	 */
-	public void appendMsg(int lineNum, String message) {
+	public synchronized void appendMsg(int lineNum, String message) {
 		add("Line #" + lineNum + " - " + message);
 	}
 
@@ -93,9 +93,11 @@ public class MessageLog2 {
 	 * Appends the exception to the log
 	 * @param t the exception to append to the log
 	 */
-	public void appendException(Throwable t) {
+	public synchronized void appendException(Throwable t) {
 		String asString = ReflectionUtilities.stackTraceToString(t);
-		add(asString);
+		// Exceptions bypass the message cap: they are usually the line that matters.
+		count++;
+		messages.add(asString);
 	}
 
 	/**
@@ -109,7 +111,7 @@ public class MessageLog2 {
 	 * @deprecated use {@link #appendMsg(String)}
 	 */
 	@Deprecated
-	public void error(String originator, String message) {
+	public synchronized void error(String originator, String message) {
 		appendMsg(originator, message);
 	}
 
@@ -117,14 +119,14 @@ public class MessageLog2 {
 	 * Returns true if this log has messages
 	 * @return true if this log has messages
 	 */
-	public boolean hasMessages() {
+	public synchronized boolean hasMessages() {
 		return count > 0;
 	}
 
 	/**
 	 * Clears all messages from this log and resets the count
 	 */
-	public void clear() {
+	public synchronized void clear() {
 		messages = new ArrayList<>();
 		count = 0;
 	}
@@ -133,14 +135,14 @@ public class MessageLog2 {
 	 * Stores a status message that can be used elsewhere (i.e., populate warning dialogs)
 	 * @param status the status message
 	 */
-	public void setStatus(String status) {
+	public synchronized void setStatus(String status) {
 		statusMsg = status;
 	}
 
 	/**
 	 * Clear status message
 	 */
-	public void clearStatus() {
+	public synchronized void clearStatus() {
 		statusMsg = StringUtils.EMPTY;
 	}
 
@@ -148,12 +150,12 @@ public class MessageLog2 {
 	 * Returns a stored status message
 	 * @return stored status message
 	 */
-	public String getStatus() {
+	public synchronized String getStatus() {
 		return statusMsg;
 	}
 
 	@Override
-	public String toString() {
+	public synchronized String toString() {
 		return toStringWithWarning();
 	}
 
@@ -162,12 +164,12 @@ public class MessageLog2 {
 	 * @param owner the owning class whose name will appear in the log message
 	 * @param messageHeader the message header that will appear before the log messages
 	 */
-	public void write(Class<?> owner, String messageHeader) {
+	public synchronized void write(Class<?> owner, String messageHeader) {
 		String header = StringUtils.defaultIfBlank(messageHeader, "Log Messages");
 		Msg.info(owner, header + '\n' + toStringWithWarning());
 	}
 
-	private String toStringWithWarning() {
+	private synchronized String toStringWithWarning() {
 		StringBuilder output = new StringBuilder();
 		if (count > maxSize) {
 			output.append("There were too many messages to display.\n");
@@ -181,7 +183,7 @@ public class MessageLog2 {
 		return output.toString();
 	}
 
-	private void add(String msg) {
+	private synchronized void add(String msg) {
 		if (StringUtils.isBlank(msg)) {
 			return;
 		}
@@ -191,7 +193,7 @@ public class MessageLog2 {
 		}
 	}
 	
-	public void writeToFile(String filePath) {
+	public synchronized void writeToFile(String filePath) {
 	    Path path = Path.of(filePath);
 	    try {
 	        Files.write(path, toStringWithWarning().getBytes(), 
@@ -203,21 +205,21 @@ public class MessageLog2 {
 	    }
 	}
 	
-	public void prependMsg(String msg) {
+	public synchronized void prependMsg(String msg) {
 		if (StringUtils.isBlank(msg)) {
 			return;
 		}
 		messages.add(0, msg);
 	}
 	
-	public String getFirstMsg() {
+	public synchronized String getFirstMsg() {
 		if (messages.size() > 0) {
 			return messages.get(0);
 		}
 		return "No message to get";
 	}
 	
-	public void deleteFirstMsg() {
+	public synchronized void deleteFirstMsg() {
 		if (messages.size() > 0) {
 			messages.remove(0);
 		}

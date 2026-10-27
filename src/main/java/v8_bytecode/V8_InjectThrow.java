@@ -1,5 +1,7 @@
 package v8_bytecode;
 
+import java.util.Map;
+
 //import ghidra.app.plugin.processors.sleigh.*;
 import ghidra.app.plugin.processors.sleigh.SleighLanguage;
 //import ghidra.app.plugin.processors.sleigh.template.*;
@@ -25,58 +27,48 @@ public class V8_InjectThrow extends V8_InjectPayload {
 		this.uniqueBase = uniqueBase;
 	}
 
+	/** The runtime function each throwing bytecode calls. */
+	private static final Map<String, String> RUNTIME_FUNCTIONS = Map.of(
+		"Throw", "Throw",
+		"ReThrow", "ReThrow",
+		"ThrowReferenceErrorIfHole", "ThrowReferenceError",
+		"ThrowSuperNotCalledIfHole", "ThrowSuperNotCalled",
+		"ThrowSuperAlreadyCalledIfNotHole", "ThrowSuperAlreadyCalledError");
+
 	@Override
 	public PcodeOp[] getPcode(Program program, InjectContext context) {
-		Integer callerParamsCount;
-		//Integer argIndex = 0;
-		Integer callerArgIndex = 0;
-		Integer fIdx = 0;
 		V8_PcodeOpEmitter pCode = new V8_PcodeOpEmitter(language, context.baseAddr, uniqueBase);
 		Address opAddr = context.baseAddr;
-
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		// get arguments from slaspec, definition in cspec
-		Integer condition = (int) context.inputlist.get(0).getOffset();
-		Integer runtimeid = (int) context.inputlist.get(1).getOffset();
+		int condition = (int) context.inputlist.get(0).getOffset();
+		int runtimeid = RuntimeIds.get(RUNTIME_FUNCTIONS.getOrDefault(instruction.getMnemonicString().split("\\.")[0], "Throw"));
 
 		if (condition > 0) {
-			pCode.emitConditionalBranchVarnode(instruction.getNext().getAddress(), condition, 4, "TheHole");
-		}
-		Integer funcType = 0;
-		if (instruction.getMnemonicString().compareTo("ThrowReferenceErrorIfHole") == 0) {
-			fIdx = 1;
-			Integer idx = (int) instruction.getScalar(0).getValue();
-			pCode.emitAssignVarnodeFromPcodeOpCall("cp", 4, "cpool", "0", "0x" + opAddr.toString(), idx.toString(),
-					funcType.toString());
+			pCode.emitConditionalBranchVarnode(instruction.getAddress().add(instruction.getLength()), condition, 4, "TheHole");
 		}
 		// get runtime function
-		funcType = 2;
 		pCode.emitAssignVarnodeFromPcodeOpCall("call_target", 4, "cpool", "0", "0x" + opAddr.toString(),
-				runtimeid.toString(), funcType.toString());
-		try {
-			callerParamsCount = program.getListing().getFunctionContaining(opAddr).getParameterCount();
-		} catch (Exception e) {
-			callerParamsCount = 0;
+				Integer.toString(runtimeid), Integer.toString(RUNTIMETYPE));
+		if (instruction.getMnemonicString().startsWith("ThrowReferenceErrorIfHole")) {
+			// Runtime::kThrowReferenceError(name)
+			int idx = (int) instruction.getScalar(0).getValue();
+			pCode.emitAssignVarnodeFromPcodeOpCall("cp", 4, "cpool", "0", "0x" + opAddr.toString(),
+					Integer.toString(idx), "0");
+			emitCallArgs(pCode, "cp");
 		}
-		// get caller args count to save only necessary ones
-		// it does not match the logic of the node.exe but important for output quality
-		if (callerParamsCount > fIdx + 1) {
-			callerParamsCount = fIdx + 1;
-		}
-
-		for (; callerArgIndex < callerParamsCount; callerArgIndex++) {
-			pCode.emitPushCat1Value("a" + callerArgIndex);
-		}
-		//argIndex = 0;
-		pCode.emitAssignVarnodeFromVarnode("a0", "_context", 4);
-		if (fIdx == 1) {
-			pCode.emitAssignVarnodeFromVarnode("a1", "_context", 4);
-			pCode.emitAssignVarnodeFromVarnode("a0", "cp", 4);
+		else if (condition == 0) {
+			// Throw / ReThrow: the exception is in the accumulator
+			emitCallArgs(pCode, "acc");
 		}
 		pCode.emitVarnodeCall("call_target", 4);
-		while (callerArgIndex > 0) {
-			callerArgIndex--;
-			pCode.emitPopCat1Value("a" + callerArgIndex);
+		if (condition == 0) {
+			// a throw does not continue with the next instruction
+			pCode.emitReturn();
 		}
 		return pCode.getPcodeOps();
 	}
@@ -97,12 +89,7 @@ public class V8_InjectThrow extends V8_InjectPayload {
 		return false;
 	}
 
-	@Override
-	public boolean isErrorPlaceholder() {
-		return true;
-	}
-	
-	@Override
+@Override
 	public void restoreXml(XmlPullParser parser, SleighLanguage lang) {
 		XmlElement el = parser.start("V8_InjectThrow");
 		parser.end(el);

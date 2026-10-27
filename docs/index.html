@@ -24,7 +24,7 @@
 
         <h2>Installation</h2>
         <blockquote>"All a woman needs in life are cigarettes, a roof, and a frilly dress, right?" — Minakami Yuki</blockquote>
-        <p>Theia was developed for <strong>Ghidra v11.3.1</strong> and has not been tested on other versions.</p>
+        <p>Theia targets <strong>Ghidra 12.2</strong> (JDK 25).</p>
         <ol>
             <li>Download the latest release <a href="https://github.com/Llamaware/Theia/releases">from here</a>.</li>
             <li>In Ghidra: File->Install Extensions...->Press <strong>green (Plus/+) button</strong>, then select the previously downloaded .zip archive to install it. Press <strong>OK</strong>, then restart Ghidra.</li>
@@ -35,9 +35,7 @@
         <blockquote>"Are you... Are you really still in the broom closet? Standing around doing nothing? Why?" — The Narrator</blockquote>
         <ol>
             <li>Clone the repo.<br><pre><code>git clone https://github.com/Llamaware/Theia.git</code></pre></li>
-            <li>Import the repo into Eclipse with the GhidraDev plugin installed.</li>
-            <li><strong>Link Ghidra</strong> to your Ghidra installation (option in the project's context menu).</li>
-            <li>Export & build plugin using the project's context menu. Eclipse will generate a resulting .zip archive with the plugin.</li>
+            <li>Build with Ghidra's Gradle wrapper; the zip is written to <code>dist/</code>.<br><pre><code>&lt;ghidra&gt;/support/gradle/gradlew buildExtension -PGHIDRA_INSTALL_DIR=&lt;ghidra&gt;</code></pre></li>
             <li>Continue with step 2 in the Installation section.</li>
         </ol>
 
@@ -46,10 +44,10 @@
         <p>After installation, you can now use Theia to disassemble binaries that have been compiled with <a href="https://docs.nwjs.io/en/latest/For%20Users/Advanced/Protect%20JavaScript%20Source%20Code/">nwjc</a>. Follow any basic Ghidra usage guide and you should be on your way.</p>
         <p>You can test Theia using the provided binaries in the /samples folder.</p>
         <p>Theia currently supports <a href="https://nwjs.io/">NW.js</a> v0.29.0 (x86). Other versions may be supported in the future, but none are planned at this time.</p>
-        <p>Theia will write logs to your Ghidra directory in the "Theia" folder, for debugging purposes.</p>
+        <p>Theia writes logs to the "Theia" folder in your Ghidra user settings directory. Start Ghidra with <code>-Dtheia.debug=true</code> for detailed analyzer, p-code and constant pool logs.</p>
         <p>Included scripts:</p>
         <ul>
-            <li>CleanDecompilationScript</li>
+            <li>DecompileToJS - prints the current function as JavaScript (headless: <code>-postScript DecompileToJS.java &lt;file&gt;</code> writes every function)</li>
             <li>RenameObfuscatedSymbolsScript</li>
             <li>PrintPCode</li>
         </ul>
@@ -58,7 +56,7 @@
         <blockquote>"OHHHHHHH YEAAAAAAAH! VERY GOOOOOOOD! One more!" — Furudo Erika</blockquote>
         <ul>
             <li>Loader - parses the file, creates the necessary sections for the code and the constants.</li>
-            <li>Analyzer - applied after the loader. Arranges the cross-references, removes stub code that the compiler has generated (simplifies analysis), and tracks codeflow.</li>
+            <li>Analyzer - applied after the loader. Arranges the cross-references, resolves context variables, switch tables and local variable names, and tracks codeflow.</li>
             <li>Disassembler/Decompiler - Thanks to the technologies implemented in Ghidra, when you write the disassembler, you get a decompiler at the same time, which is really convenient. To do this, Ghidra’s internal language SLEIGH is used.</li>
             <li>PCode Injector - The injector draws up an intermediate representation for the decompiler when this is hard to achieve or even impossible using SLEIGH.</li>
             <li>Scripts - Includes some helpful Ghidra scripts to aid in decompilation.</li>
@@ -69,8 +67,7 @@
         <p>The .bin file consists of a header and serialized data. The header of the .bin file is virtually identical to the header of bytenode-compiled .jsc files and is described as follows.</p>
         <img src="table1.png" alt="Table 1" />
         <p><em>More info to come later...</em></p>
-        <p>Modifying Theia to work with different version of NW.js is trivial and has been left as an exercise to the reader.</p>
-        <p>The scripts found in the /scripts directory of the repo will be helpful in this case.</p>
+        <p>To support another NW.js version, see <a href="https://github.com/Llamaware/Theia/blob/main/docs/FORKING.md">docs/FORKING.md</a> and the tools in <a href="https://github.com/Llamaware/Theia/tree/main/scripts">/scripts</a>.</p>
 
         <h2>Issues</h2>
         <blockquote>"I just can't sit any other way than this. If I sit the way other people do, my reasoning ability drops by 40%." — L</blockquote>
