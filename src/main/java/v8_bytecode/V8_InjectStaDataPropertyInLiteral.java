@@ -30,6 +30,10 @@ public class V8_InjectStaDataPropertyInLiteral extends V8_InjectPayload {
 		V8_PcodeOpEmitter pCode = new V8_PcodeOpEmitter(language, context.baseAddr, uniqueBase);
 		Address opAddr = context.baseAddr;
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		try {
 			callerParamsCount = program.getListing().getFunctionContaining(opAddr).getParameterCount();
 		} catch (Exception e) {

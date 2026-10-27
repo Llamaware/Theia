@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 //import ghidra.app.plugin.processors.sleigh.*;
 //import ghidra.app.plugin.processors.sleigh.template.*;
@@ -29,6 +31,8 @@ public final class FuncsStorage extends PrivateSaveable {
 	private RootsStore rootsEnum = null;
 	private RuntimesIntrinsicsStore runsIntrsStore = null;
 	private Set<SharedFunctionStore> sharedFuncs = new HashSet<>();
+	// Lookup index by start offset; rebuilt lazily, never serialized.
+	private transient TreeMap<Long, SharedFunctionStore> funcsByOffset = null;
 	
 	public FuncsStorage() {
 		
@@ -135,36 +139,49 @@ public final class FuncsStorage extends PrivateSaveable {
 	
 	public void addToSharedFunctions(final SharedFunctionStore func) {
 		sharedFuncs.add(func);
+		funcsByOffset = null;
 	}
 	
-	private SharedFunctionStore getSharedFunction(final Address addrInFunc) {
-		for (final SharedFunctionStore func : sharedFuncs) {
-			if (func.contains(addrInFunc.getOffset())) {
-				return func;
+	private synchronized SharedFunctionStore getSharedFunction(final Address addrInFunc) {
+		final long offset = addrInFunc.getOffset();
+		if (funcsByOffset != null) {
+			final Map.Entry<Long, SharedFunctionStore> entry = funcsByOffset.floorEntry(offset);
+			if (entry != null && entry.getValue().contains(offset)) {
+				return entry.getValue();
 			}
 		}
-		
-		return null;
+		// Index missing or stale: scan, then rebuild the index for the next lookups.
+		SharedFunctionStore found = null;
+		funcsByOffset = new TreeMap<>();
+		for (final SharedFunctionStore func : sharedFuncs) {
+			funcsByOffset.put(func.getAddress(), func);
+			if (found == null && func.contains(offset)) {
+				found = func;
+			}
+		}
+		return found;
 	}
 	
 	public ScopeInfoStore getScopeInfo(final Address addr, final String reg) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
-		return sharedFunc.getScopeInfo(reg);
+		return (sharedFunc != null) ? sharedFunc.getScopeInfo(reg) : null;
 	}
 	
 	public ScopeInfoStore getOuterScopeInfo(final Address addr) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
-		return sharedFunc.getOuterScopeInfo();
+		return (sharedFunc != null) ? sharedFunc.getOuterScopeInfo() : null;
 	}
 	
 	public void pushScopeInfo(final Address addr, final String reg, final ScopeInfoStore scope) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
-		sharedFunc.pushScopeInfo(reg, scope);
+		if (sharedFunc != null) {
+			sharedFunc.pushScopeInfo(reg, scope);
+		}
 	}
 	
 	public ScopeInfoStore popScopeInfo(final Address addr, final String reg) {
 		final SharedFunctionStore sharedFunc = getSharedFunction(addr);
-		return sharedFunc.popScopeInfo(reg);
+		return (sharedFunc != null) ? sharedFunc.popScopeInfo(reg) : null;
 	}
 	
 	public Object getConstItem(final Address addr, int index) {

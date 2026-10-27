@@ -8,6 +8,9 @@ import ghidra.app.plugin.processors.sleigh.SleighLanguage;
 //import ghidra.app.plugin.processors.sleigh.template.*;
 import ghidra.program.model.lang.InjectContext;
 import ghidra.program.model.lang.InjectPayload;
+import ghidra.program.model.lang.Language;
+import ghidra.program.model.lang.Register;
+import ghidra.program.model.listing.Instruction;
 import ghidra.program.model.pcode.*;
 //import ghidra.xml.*;
 //import ghidra.program.model.util.PropertyMap;
@@ -22,6 +25,46 @@ public abstract class V8_InjectPayload implements InjectPayload {
 		this.sourceName = sourceName;
 		this.uniqueBase = uniqueBase;
 
+	}
+
+	/**
+	 * Expands a register range operand, displayed as "rStart-rEnd" (or "{}" when empty),
+	 * into its registers in V8 order. Consecutive registers of a V8 range have decreasing
+	 * operand bytes, which is increasing r-register / decreasing a-register addresses, so
+	 * stepping from the first to the last register's address covers both cases.
+	 */
+	protected static Register[] getRangeRegisters(Instruction instruction, int opIndex) {
+		Register first = null;
+		Register last = null;
+		for (Object o : instruction.getOpObjects(opIndex)) {
+			if (o instanceof Register) {
+				if (first == null) {
+					first = (Register) o;
+				}
+				last = (Register) o;
+			}
+		}
+		if (first == null) {
+			return new Register[0];
+		}
+		final Language lang = instruction.getPrototype().getLanguage();
+		final long delta = last.getOffset() - first.getOffset();
+		final int step = delta >= 0 ? 4 : -4;
+		final Register[] result = new Register[(int) (Math.abs(delta) / 4) + 1];
+		for (int i = 0; i < result.length; i++) {
+			result[i] = lang.getRegister(first.getAddress().add((long) i * step), 4);
+		}
+		return result;
+	}
+
+	/**
+	 * Fallback for flow the listing has not disassembled: the decompiler rejects an empty
+	 * injection, so emit a COPY of acc onto itself.
+	 */
+	protected PcodeOp[] noOpPayload(InjectContext context) {
+		final Register acc = language.getRegister("acc");
+		final Varnode accVn = new Varnode(acc.getAddress(), acc.getMinimumByteSize());
+		return new PcodeOp[] { new PcodeOp(context.baseAddr, 0, PcodeOp.COPY, new Varnode[] { accVn }, accVn) };
 	}
 
 	@Override

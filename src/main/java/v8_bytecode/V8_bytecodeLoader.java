@@ -18,13 +18,13 @@ package v8_bytecode;
 import java.io.IOException;
 import java.util.*;
 
-import ghidra.app.util.Option;
 import ghidra.app.util.bin.ByteProvider;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractProgramWrapperLoader;
 import ghidra.app.util.opinion.LoadSpec;
 //import ghidra.framework.model.DomainObject;
 import ghidra.program.model.listing.Program;
+import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
 import ghidra.util.task.TaskMonitor;
 
@@ -66,9 +66,11 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 	}
 
 	@Override
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-			Program program, TaskMonitor monitor, MessageLog log)
+	protected void load(Program program, ImporterSettings settings)
 			throws CancelledException, IOException {
+		ByteProvider provider = settings.provider();
+		TaskMonitor monitor = settings.monitor();
+		MessageLog log = settings.log();
 
 		Options aOpts = program.getOptions(Program.ANALYSIS_PROPERTIES);
 		aOpts.setBoolean("Decompiler Switch Analysis", false);
@@ -88,7 +90,7 @@ public class V8_bytecodeLoader extends AbstractProgramWrapperLoader {
 			String logResult = LogWriter.writeLog(log2, "loader.log");
 			log.appendMsg("Load complete, everything okay!\nDebug log written to:\n" + logResult);
 		} catch (Exception e) {
-			e.printStackTrace();
+			Msg.error(this, "Theia failed to load " + provider.getName(), e);
 			log2.appendException(e);
 			String logResult = LogWriter.writeLog(log2, "loader.log");
 			log.appendMsg("Something went wrong!");

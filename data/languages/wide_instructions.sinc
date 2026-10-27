@@ -15,15 +15,15 @@ define token dr_operand(32)
 	w_kRuntimeId = (0,31)
 ;
 
-w_dest: rel is w_kUImm [ rel = inst_start + w_kUImm; ] {
+w_dest: rel is w_kUImm [ rel = inst_start + 1 + w_kUImm; ] {
   export *[ram]:4 rel;
 }
 w_destloop: rel is w_kUImm [ rel = inst_start - w_kUImm + 1; ] {
   export *[ram]:4 rel;
 }
-w_rangeSrc: {  is kReg; w_Pad; w_kUImm  [ offStart = kReg; counter =  w_kUImm;] {range_size = w_kUImm;  export kReg;}
-w_pair: {  is kReg; w_Pad  [offStart = kReg; counter = 2; ] {range_size = 2 ; export kReg; }
-w_triple: {   is kReg; w_Pad  [offStart = kReg; counter = 3;] { range_size = 3; export kReg; }
+w_rangeSrc: is kReg; w_Pad; w_kUImm  [ rStartV = kReg; rEndV = kReg - w_kUImm + 1; counter = w_kUImm; ] {range_size = w_kUImm;  export kReg;}
+w_pair: is kReg; w_Pad  [ rStartV = kReg; rEndV = kReg - 1; counter = 2; ] {range_size = 2 ; export kReg; }
+w_triple: is kReg; w_Pad  [ rStartV = kReg; rEndV = kReg - 2; counter = 3; ] { range_size = 3; export kReg; }
 
 w_src: kReg is kReg; w_Pad {export kReg;}
 w_dst: kReg is kReg; w_Pad {export kReg;}
@@ -111,8 +111,8 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :LdaLookupSlot.Wide [w_kIdx] is wide = 0; op = 0x15; w_kIdx {
 	acc = LdaLookupSlot(w_kIdx:4);
 }
-:LdaLookupContextSlot.Wide [w_kIdx] is wide = 0; op = 0x16; w_kIdx {
-	acc = LdaLookupContextSlot(w_kIdx:4);
+:LdaLookupContextSlot.Wide [w_kIdx], [w_kIdx_2], [w_kUImm] is wide = 0; op = 0x16; w_kIdx; w_kIdx_2; w_kUImm {
+	acc = LdaLookupContextSlot(w_kIdx:4, w_kIdx_2:4, w_kUImm:4);
 }
 :LdaLookupGlobalSlot.Wide [w_kIdx], [w_kIdx_2], [w_kUImm] is wide = 0; op = 0x17; w_kIdx; w_kIdx_2; w_kUImm {
 	acc = LdaLookupGlobalSlot(w_kIdx:4, w_kIdx_2:4, w_kUImm:4);
@@ -292,18 +292,18 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	#The final argument is always a spread.
 	CallVariadicCallOther($(PROPERTYTYPE):4, $(RECV_ARG):4);
 }
-:CallRuntime.Wide [w_kRuntimeId], w_rangeSrc^rangeDst is wide = 0; op = 0x54; w_kRuntimeId; w_rangeSrc; rangeDst {
+:CallRuntime.Wide [kRuntimeId], w_rangeSrc^rangeDst is wide = 0; op = 0x54; kRuntimeId; w_rangeSrc; rangeDst {
 	CallRuntimeCallOther($(RUNTIMETYPE):4, $(RECV_UNDEF):4);
 }
 #Returns the result in <first_return> and <first_return + 1>, acc write?
-:CallRuntimeForPair.Wide w_kRuntimeId, w_rangeSrc^rangeDst, w_pair^rangeDstStub is wide = 0; op = 0x55; w_kRuntimeId; w_rangeSrc; rangeDst; w_pair; rangeDstStub {
-	CallRuntimeForPair(w_kRuntimeId:4, w_rangeSrc, range_size, w_pair);
+:CallRuntimeForPair.Wide kRuntimeId, w_rangeSrc^rangeDst, w_pair^rangeDstStub is wide = 0; op = 0x55; kRuntimeId; w_rangeSrc; rangeDst; w_pair; rangeDstStub {
+	CallRuntimeForPair(kRuntimeId:4, w_rangeSrc, range_size, w_pair);
 }
 :CallJSRuntime.Wide [w_kIdx], w_rangeSrc^rangeDst is wide = 0; op = 0x56; w_kIdx; w_rangeSrc; rangeDst {
 	acc = GetJSRuntime(w_kIdx:4);
 	CallJSRuntimeCallOther();	
 }
-:InvokeIntrinsic.Wide [w_kIntrinsicId], w_rangeSrc^rangeDst is wide = 0; op = 0x57; w_kIntrinsicId; w_rangeSrc; rangeDst {
+:InvokeIntrinsic.Wide [kIntrinsicId], w_rangeSrc^rangeDst is wide = 0; op = 0x57; kIntrinsicId; w_rangeSrc; rangeDst {
 	InvokeIntrinsicCallOther($(INTRINSICTYPE):4, $(RECV_UNDEF):4);
 }
 :Construct.Wide w_constructor, w_rangeSrc^rangeDst, [w_kIdx] is wide = 0; op = 0x58; w_constructor; w_rangeSrc; rangeDst; w_kIdx {
@@ -354,7 +354,7 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 	# no feedback
 	acc = TestEqualStrict(acc,w_src);
 }
-:TestInstanceOf.Wide w_src is wide = 0; op = 0x61; w_src {
+:TestInstanceOf.Wide w_src, [w_kIdx] is wide = 0; op = 0x61; w_src; w_kIdx {
 	acc = InstanceOf(w_src, acc, _context);
 }
 :TestIn.Wide w_src is wide = 0; op = 0x62; w_src {
@@ -381,8 +381,8 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :ToName.Wide w_dst is wide = 0; op = 0x67; w_dst {
 	w_dst = ToName(acc, _context);
 }
-:ToNumber.Wide w_dst, [w_kIdx] is wide = 0; op = 0x68; w_dst; w_kIdx {
-	w_dst = ToNumber(acc);
+:ToNumber.Wide [w_kIdx] is wide = 0; op = 0x68; w_kIdx {
+	acc = ToNumber(acc);
 }
 :ToObject.Wide w_dst is wide = 0; op = 0x6a; w_dst {
 	w_dst = ToObject(acc);
@@ -452,61 +452,61 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 }
 :JumpConstant.Wide [w_kIdx] is wide = 0; op = 0x7c; w_kIdx {
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 =  inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfNullConstant.Wide [w_kIdx] is wide = 0; op = 0x7d; w_kIdx {
 	if (acc != Null) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfNotNullConstant.Wide [w_kIdx] is wide = 0; op = 0x7e; w_kIdx {
 	if (acc == Null) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfUndefinedConstant.Wide [w_kIdx] is wide = 0; op = 0x7f; w_kIdx {
 	if (acc != Undefined)  goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfNotUndefinedConstant.Wide [w_kIdx] is wide = 0; op = 0x80; w_kIdx {
 	if (acc == Undefined) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfTrueConstant.Wide [w_kIdx] is wide = 0; op = 0x81; w_kIdx {
 	if (acc != True) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfFalseConstant.Wide [w_kIdx] is wide = 0; op = 0x82; w_kIdx {
 	if (acc != False) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfJSReceiverConstant.Wide [w_kIdx] is wide = 0; op = 0x83; w_kIdx {
 	if (acc != JSReceiver) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfToBooleanTrueConstant.Wide [w_kIdx] is wide = 0; op = 0x84; w_kIdx {
 	if (ToBoolean(acc) != True) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfToBooleanFalseConstant.Wide [w_kIdx] is wide = 0; op = 0x85; w_kIdx {
 	if (ToBoolean(acc) != False) goto inst_next;
 	tmp:4 = cpool(0, inst_start,w_kIdx, $(CP_SMI));
-	addr:4 = inst_start + tmp;
+	addr:4 = inst_start + 1 + tmp;
 	goto [addr];
 }
 :JumpIfToBooleanTrue.Wide [w_dest] is wide = 0; op = 0x86; w_dest {
@@ -541,8 +541,8 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
   SwitchOnSmiNoFeedback(cpool(0:4, inst_start,0, 0:4));
 }
 
-:ForInPrepare.Wide w_receiver, w_triple^rangeDst is wide = 0; op = 0x91; w_receiver; w_triple; rangeDst {
-	ForInPrepare(w_receiver, w_triple, 3:4);
+:ForInPrepare.Wide w_triple^rangeDst, [w_kIdx] is wide = 0; op = 0x91; w_triple; rangeDst; w_kIdx {
+	ForInPrepare(acc, w_triple, 3:4);
 }
 :ForInContinue.Wide w_index, w_cache_length is wide = 0; op = 0x92; w_index; w_cache_length {
 	acc = ForInContinue(w_index, w_cache_length);
@@ -592,3 +592,31 @@ w_cache_length: kReg is kReg; w_Pad {export kReg;}
 :Illegal.Wide is wide = 0; op = 0xac {Illegal();}
 # was not presented in our version, only for switch purposes
 :Nop.Wide is wide = 0; op = 0xa8 {}
+# ---- bytecodes added for V8 6.5 ----
+:Exp.Wide w_src, [w_kIdx] is wide = 0; op = 0x2d; w_src; w_kIdx {
+	acc = Exp(w_src, acc);
+}
+:ExpSmi.Wide [w_kImm], [w_kIdx] is wide = 0; op = 0x39; w_kImm; w_kIdx {
+	acc = Exp(acc, w_kImm:4);
+}
+:Negate.Wide [w_kIdx] is wide = 0; op = 0x42; w_kIdx {
+	acc = -acc;
+}
+:BitwiseNot.Wide [w_kIdx] is wide = 0; op = 0x43; w_kIdx {
+	acc = ~acc;
+}
+:ToNumeric.Wide [w_kIdx] is wide = 0; op = 0x69; w_kIdx {
+	acc = ToNumeric(acc);
+}
+:ForInEnumerate.Wide w_receiver is wide = 0; op = 0x90; w_receiver {
+	acc = ForInEnumerate(w_receiver);
+}
+:ResumeGenerator.Wide w_src, w_dst, w_rangeSrc^rangeDst is wide = 0; op = 0x9f; w_src; w_dst; w_rangeSrc; rangeDst {
+	w_dst = GetGeneratorState(w_src);
+	RestoreGeneratorRegisters(w_src, w_rangeSrc, range_size);
+	SetGeneratorExecuting(w_src);
+	acc = ResumeGenerator(w_src);
+}
+:Abort.Wide [w_kIdx] is wide = 0; op = 0xab; w_kIdx {
+	Abort(w_kIdx:4);
+}

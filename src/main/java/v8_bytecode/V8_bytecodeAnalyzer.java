@@ -156,20 +156,22 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 			
 			final Address addr = fiter.next();
 
+			Instruction instruction = listing.getInstructionAt(addr);
+		
+			if (instruction == null) {
+				continue;
+			}
+
 			Function func = mgr.getFunctionContaining(addr);
 			
 			if (func != null) {
 				final String logString = String.format("Applying references for \"%s\"", func.getName());
 				monitor.setMessage(logString);
 			}
-
-			Instruction instruction = listing.getInstructionAt(addr);
-		
-			if (instruction == null) {
-				continue;
-			}
 		
 			String mnemonic = trimMnemonic(instruction.getMnemonicString());
+			// V8 jump targets are relative to the bytecode after a Wide/ExtraWide prefix
+			final int prefixOffset = mnemonic.equals(instruction.getMnemonicString()) ? 0 : 1;
 			
 			// System.out.println(String.format("0x%08X - %s", addr.getOffset(), instruction));
 			
@@ -227,18 +229,24 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 							}
 						} break;
 						case "CreateBlockContext": {
-							currentScope = (ScopeInfoStore) funcsStorage.getConstItem(addr, index);
+							final Object scopeItem = funcsStorage.getConstItem(addr, index);
+							currentScope = (scopeItem instanceof ScopeInfoStore) ? (ScopeInfoStore) scopeItem : null;
 
-							final Address itemAddr = fpa.toAddr(funcsStorage.getConstItemAddress(addr, index));
-							instruction.addOperandReference(opIndex, itemAddr, RefType.DATA, SourceType.ANALYSIS);
+							final long itemOffset = funcsStorage.getConstItemAddress(addr, index);
+							if (itemOffset >= 0) {
+								instruction.addOperandReference(opIndex, fpa.toAddr(itemOffset), RefType.DATA, SourceType.ANALYSIS);
+							}
 						} break;
 						case "CreateCatchContext": {
 							if (opIndex == 2) {
-								currentScope = (ScopeInfoStore) funcsStorage.getConstItem(addr, index);
+								final Object scopeItem = funcsStorage.getConstItem(addr, index);
+								currentScope = (scopeItem instanceof ScopeInfoStore) ? (ScopeInfoStore) scopeItem : null;
 							}
 
-							final Address itemAddr = fpa.toAddr(funcsStorage.getConstItemAddress(addr, index));
-							instruction.addOperandReference(opIndex, itemAddr, RefType.DATA, SourceType.ANALYSIS);
+							final long itemOffset = funcsStorage.getConstItemAddress(addr, index);
+							if (itemOffset >= 0) {
+								instruction.addOperandReference(opIndex, fpa.toAddr(itemOffset), RefType.DATA, SourceType.ANALYSIS);
+							}
 						} break;
 						case "SwitchOnSmiNoFeedback": {
 							int itemsCount = (int) (instruction.getScalar(opIndex + 1).getValue() & 0xFFFFFFFF);
@@ -249,10 +257,14 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 								
 								final Address refAddr;
 								
+								if (!(item instanceof Integer) && !(item instanceof Long)) {
+									log2.appendMsg("Unresolved switch table entry " + (index + ic) + " at " + addr);
+									continue;
+								}
 								if (item instanceof Integer) {
-									refAddr = addr.add(NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
+									refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
 								} else { // item instanceof Long
-									refAddr = addr.add(NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
+									refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
 								}
 								
 								refs.add(refAddr);
@@ -322,7 +334,9 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 					switch (mnemonic) {
 					case "CreateFunctionContext": {
 						currentScope = funcsStorage.getScopeInfo(addr, _context);
-						instruction.addOperandReference(opIndex, fpa.toAddr(currentScope.getOffset()), refType, SourceType.ANALYSIS);
+						if (currentScope != null) {
+							instruction.addOperandReference(opIndex, fpa.toAddr(currentScope.getOffset()), refType, SourceType.ANALYSIS);
+						}
 					} break;
 					default: {
 						try {
@@ -408,6 +422,10 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 					instruction.removeOperandReference(opIndex, fpa.toAddr(index));
 					
 					final Object item = funcsStorage.getConstItem(addr, index);
+					if (!(item instanceof Integer) && !(item instanceof Long)) {
+						log2.appendMsg("Unresolved jump offset constant " + index + " at " + addr);
+						continue;
+					}
 					
 					int pointerSize = ObjectsAllocator.getPointerSize(program);
 					log2.appendMsg("Pointer size: " + pointerSize);
@@ -423,9 +441,9 @@ public class V8_bytecodeAnalyzer extends AbstractAnalyzer {
 					final Address refAddr;
 					
 					if (item instanceof Integer) {
-						refAddr = addr.add(NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
+						refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((int)item, ObjectsAllocator.getPointerSize(program)));
 					} else { // item instanceof Long
-						refAddr = addr.add(NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
+						refAddr = addr.add(prefixOffset + NwjcParser.smiToInt((long)item, ObjectsAllocator.getPointerSize(program)));
 					}
 					
 					boolean jumpConst = mnemonic.equals("JumpConstant");

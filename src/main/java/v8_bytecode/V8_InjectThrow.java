@@ -35,12 +35,16 @@ public class V8_InjectThrow extends V8_InjectPayload {
 		Address opAddr = context.baseAddr;
 
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		// get arguments from slaspec, definition in cspec
 		Integer condition = (int) context.inputlist.get(0).getOffset();
 		Integer runtimeid = (int) context.inputlist.get(1).getOffset();
 
 		if (condition > 0) {
-			pCode.emitConditionalBranchVarnode(instruction.getNext().getAddress(), condition, 4, "TheHole");
+			pCode.emitConditionalBranchVarnode(instruction.getAddress().add(instruction.getLength()), condition, 4, "TheHole");
 		}
 		Integer funcType = 0;
 		if (instruction.getMnemonicString().compareTo("ThrowReferenceErrorIfHole") == 0) {

@@ -332,7 +332,7 @@ public final class SharedFunctionInfoStruct implements IAllocatable {
 			args.add(new ParameterImpl(param, IntegerDataType.dataType, program.getRegister(String.format("a%d", i)), program, SourceType.USER_DEFINED));
 		}
 		args.add(new ParameterImpl("this", new PointerDataType(VoidDataType.dataType), program.getRegister(String.format("a%d", params.size() + 1)), program, SourceType.USER_DEFINED));
-		func.updateFunction("__stdcall", null, FunctionUpdateType.DYNAMIC_STORAGE_ALL_PARAMS, true, SourceType.DEFAULT, args.toArray(ParameterImpl[]::new));
+		func.updateFunction("__stdcall", null, FunctionUpdateType.DYNAMIC_STORAGE_ALL_PARAMS, true, SourceType.IMPORTED, args.toArray(ParameterImpl[]::new));
 		
 		final List<String> stackLocals = scopeInfo.getStackLocals();
 		final List<String> addedStackLocals = new ArrayList<>();

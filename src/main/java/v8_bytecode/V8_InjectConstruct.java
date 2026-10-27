@@ -37,8 +37,12 @@ public class V8_InjectConstruct extends V8_InjectPayload {
 		V8_PcodeOpEmitter pCode = new V8_PcodeOpEmitter(language, context.baseAddr, uniqueBase); 	
 		Address opAddr = context.baseAddr;
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		Integer opIndex = 2;
-		Object[] opObjects = instruction.getOpObjects(opIndex);
+		Object[] opObjects = getRangeRegisters(instruction, opIndex);
 		String[] args = new String[opObjects.length + 1];
 		args[0] = instruction.getRegister(0).toString();
 		for(int i=0; i < opObjects.length; i++) {

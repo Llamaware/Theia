@@ -1,5 +1,7 @@
 package v8_bytecode;
 
+import java.nio.charset.StandardCharsets;
+
 import ghidra.program.model.lang.ConstantPool;
 import ghidra.program.model.listing.Function;
 import ghidra.program.model.listing.Program;
@@ -53,7 +55,7 @@ public class V8_ConstantPool extends ConstantPool {
 			if (cpItem instanceof String) {
 				res.tag = ConstantPool.STRING_LITERAL;
 				res.type = new PointerDataType(CharDataType.dataType);
-				res.byteData = ((String)cpItem).getBytes();
+				res.byteData = ((String)cpItem).getBytes(StandardCharsets.UTF_8);
 			} else if (cpItem instanceof Integer) {
 		          res.tag = ConstantPool.PRIMITIVE;
 		          res.type = IntegerDataType.dataType;
@@ -149,8 +151,10 @@ public class V8_ConstantPool extends ConstantPool {
 			final long val;
 			if (cpItem instanceof Integer) {
 				val = NwjcParser.smiToInt((int)cpItem, ObjectsAllocator.getPointerSize(fpa.getCurrentProgram()));
-			} else { // item instanceof Long
-				val = NwjcParser.smiToInt((long)cpItem, ObjectsAllocator.getPointerSize(fpa.getCurrentProgram()));	
+			} else if (cpItem instanceof Long) {
+				val = NwjcParser.smiToInt((long)cpItem, ObjectsAllocator.getPointerSize(fpa.getCurrentProgram()));
+			} else {
+				break;
 			}
 			
 			res.tag = ConstantPool.PRIMITIVE;
@@ -159,7 +163,18 @@ public class V8_ConstantPool extends ConstantPool {
 	        res.token = "longlong";
 		} break;
 		}
-		LogWriter.writeLog(log, "cpool.log");
+		// DecompileCallback.getCPoolRef encodes the token and type of every record;
+		// a missing one crashes the decompile.
+		if (res.type == null) {
+			res.type = new PointerDataType(VoidDataType.dataType);
+		}
+		if (res.token == null) {
+			log.appendMsg(String.format("Unresolved constant pool item %d (type %d) at %04X", index, indexType, address));
+			res.token = String.format("cpool_%d", index);
+		}
+		if (LogWriter.isDebug()) {
+			LogWriter.writeLog(log, "cpool.log");
+		}
 		return res;
 	}
 }

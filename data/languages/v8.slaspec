@@ -64,6 +64,12 @@ define register offset=0x00 size=8   contextreg;
 define context contextreg
 	counter = (0,7)
 	offStart = (8,16) signed
+	# first/last operand byte of a register range, displayed by rangeDst
+	rStart = (24,31)
+	rEnd = (32,39)
+	# same bits, unattached, so disassembly actions can assign them
+	rStartV = (24,31)
+	rEndV = (32,39)
 ;
 
 define token operand(8)
@@ -80,7 +86,7 @@ define token wr_operand(16)
 	kRuntimeId = (0,15)
 ;
 
-attach variables [ kReg ] [
+attach variables [ kReg rStart rEnd ] [
 	_ _ a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 a16
 	a17 a18 a19 a20 a21 a22 a23 a24 a25 a26 a27 a28 a29 a30 a31 a32 
 	a33 a34 a35 a36 a37 a38 a39 a40 a41 a42 a43 a44 a45 a46 a47 a48 
@@ -188,6 +194,11 @@ define pcodeop DebugBreakWide;
 define pcodeop DebugBreakExtraWide;
 define pcodeop IncBlockCounter;
 define pcodeop Illegal;
+# added for V8 6.5
+define pcodeop Exp;
+define pcodeop ToNumeric;
+define pcodeop ResumeGenerator;
+define pcodeop Abort;
 
 # destination for jumps
 dest: rel is kUImm [ rel = inst_start + kUImm; ] {
@@ -199,9 +210,9 @@ destloop: rel is kUImm [ rel = inst_start - kUImm; ] {
 }
 
 # second part in rangeDst, view ranges.sinc
-rangeSrc: {  is kReg; kUImm  [ offStart = kReg; counter =  kUImm; ] { range_size = kUImm;  export kReg;}
-pair: {  is kReg  [offStart = kReg; counter = 2; ] { range_size = 2 ; export kReg; }
-triple: {   is kReg  [offStart = kReg; counter = 3; ] { range_size = 3; export kReg; }
+rangeSrc: is kReg; kUImm  [ rStartV = kReg; rEndV = kReg - kUImm + 1; counter = kUImm; ] { range_size = kUImm;  export kReg;}
+pair: is kReg  [ rStartV = kReg; rEndV = kReg - 1; counter = 2; ] { range_size = 2 ; export kReg; }
+triple: is kReg  [ rStartV = kReg; rEndV = kReg - 2; counter = 3; ] { range_size = 3; export kReg; }
 
 src: kReg is kReg {export kReg;}
 dst: kReg is kReg {export kReg;}
@@ -297,8 +308,8 @@ cache_length: kReg is kReg {export kReg;}
 # LdaLookupSlot <name_index>
 # 
 #  Lookup the object with the name in constant pool entry |name_index|  dynamically.
-:LdaLookupContextSlot [kIdx] is op = 0x16; kIdx {
-  acc = LdaLookupContextSlot(kIdx:4);
+:LdaLookupContextSlot [kIdx], [kIdx_2], [kUImm] is op = 0x16; kIdx; kIdx_2; kUImm {
+  acc = LdaLookupContextSlot(kIdx:4, kIdx_2:4, kUImm:4);
 }
 # LdaLookupGlobalSlot <name_index> <feedback_slot> <depth>
 #
@@ -441,7 +452,7 @@ cache_length: kReg is kReg {export kReg;}
 :Negate [kIdx] is op = 0x42; kIdx {
   acc = -acc;
 }
-:BitwiseNot is op = 0x43 {
+:BitwiseNot [kIdx] is op = 0x43; kIdx {
   acc = ~acc;
 }
 :ToBooleanLogicalNot is op = 0x44 {
@@ -554,7 +565,7 @@ cache_length: kReg is kReg {export kReg;}
 	# no feedback
 	acc = TestEqualStrict(acc,src);
 }
-:TestInstanceOf src is op = 0x61; src {
+:TestInstanceOf src, [kIdx] is op = 0x61; src; kIdx {
 	acc = InstanceOf(src, acc, _context);
 }
 :TestIn src is op = 0x62; src {
@@ -581,8 +592,8 @@ cache_length: kReg is kReg {export kReg;}
 :ToName dst is op = 0x67; dst {
 	dst = ToName(acc, _context);
 }
-:ToNumber dst, [kIdx] is op = 0x68; dst; kIdx {
-	dst = ToNumber(acc);
+:ToNumber [kIdx] is op = 0x68; kIdx {
+	acc = ToNumber(acc);
 }
 :ToObject dst is op = 0x6a; dst {
 	dst = ToObject(acc);
@@ -744,8 +755,8 @@ cache_length: kReg is kReg {export kReg;}
     acc = ForInEnumerate(receiver);
 }
 
-:ForInPrepare receiver, triple^rangeDst is op = 0x91; receiver; triple; rangeDst {
-	ForInPrepare(receiver, triple, 3:4);
+:ForInPrepare triple^rangeDst, [kIdx] is op = 0x91; triple; rangeDst; kIdx {
+	ForInPrepare(acc, triple, 3:4);
 }
 :ForInContinue index, cache_length is op = 0x92; index; cache_length {
 	acc = ForInContinue(index, cache_length);
@@ -804,6 +815,27 @@ cache_length: kReg is kReg {export kReg;}
 :Illegal is op = 0xac {Illegal();}
 # was not presented in our version, only for switch purposes
 :Nop is op = 0xad {}
+
+# ---- bytecodes added for V8 6.5 ----
+:Exp src, [kIdx] is op = 0x2d; src; kIdx {
+	acc = Exp(src, acc);
+}
+:ExpSmi [kImm], [kIdx] is op = 0x39; kImm; kIdx {
+	acc = Exp(acc, kImm:4);
+}
+:ToNumeric [kIdx] is op = 0x69; kIdx {
+	acc = ToNumeric(acc);
+}
+# ResumeGenerator <generator> <generator_state_out> <first output register> <register count>
+:ResumeGenerator src, dst, rangeSrc^rangeDst is op = 0x9f; src; dst; rangeSrc; rangeDst {
+	dst = GetGeneratorState(src);
+	RestoreGeneratorRegisters(src, rangeSrc, range_size);
+	SetGeneratorExecuting(src);
+	acc = ResumeGenerator(src);
+}
+:Abort [kIdx] is op = 0xab; kIdx {
+	Abort(kIdx:4);
+}
 
 @include "wide_instructions.sinc"
 @include "extrawide_instructions.sinc"

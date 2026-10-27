@@ -165,9 +165,11 @@ public final class ScopeInfoStruct implements IAllocatable {
 		}
 		
 		if (scopeFlags.hasFunctionVar()) {
-			funcVar = new ScopeInfoReceiver(obj.getInt(offset), (String)obj.getAlignedObject(offset + pointerSize), "Var", index, allocator);
+			// FunctionNameInfo occupies two slots: the variable's name, then its slot index.
+			final String funcVarName = allocator.convertString(obj.getAlignedObject(offset));
+			funcVar = new ScopeInfoReceiver(obj.getInt(offset + pointerSize), funcVarName, "Var", index, allocator);
 			s.add(funcVar.toDataType(), -1, "FuncVar", null);
-			offset += pointerSize;
+			offset += 2 * pointerSize;
 		} else {
 			funcVar = null;
 		}

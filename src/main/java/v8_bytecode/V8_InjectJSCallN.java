@@ -32,6 +32,10 @@ public class V8_InjectJSCallN extends V8_InjectPayload {
 		V8_PcodeOpEmitter pCode = new V8_PcodeOpEmitter(language, context.baseAddr, uniqueBase);
 		Address opAddr = context.baseAddr;
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		// get arguments from slaspec, definition in cspec
 		Integer argcount = (int) context.inputlist.get(0).getOffset();
 		Integer receiver = (int) context.inputlist.get(1).getOffset();

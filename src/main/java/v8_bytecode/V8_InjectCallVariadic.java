@@ -40,6 +40,10 @@ public V8_InjectCallVariadic(String sourceName, SleighLanguage language, long un
 		Address opAddr = context.baseAddr;
 
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
 		// get arguments from slaspec, definition in cspec
 		Integer funcType = (int) context.inputlist.get(0).getOffset();
 		Integer receiver = (int) context.inputlist.get(1).getOffset();
@@ -53,7 +57,7 @@ public V8_InjectCallVariadic(String sourceName, SleighLanguage language, long un
 			pCode.emitAssignVarnodeFromVarnode("call_target", instruction.getRegister(0).toString(), 4);
 		}
 		// get register range
-		Object[] tOpObjects = instruction.getOpObjects(2);
+		Object[] tOpObjects = getRangeRegisters(instruction, 2);
 		// get caller args count to save only necessary ones
 		// it does not match the logic of the node.exe but important for output quality
 		Object[] opObjects;

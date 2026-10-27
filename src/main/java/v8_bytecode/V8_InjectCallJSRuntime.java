@@ -34,7 +34,11 @@ public class V8_InjectCallJSRuntime extends V8_InjectPayload {
 		Integer argIndex = 0;
 		Integer callerArgIndex = 0;
 		Instruction instruction = program.getListing().getInstructionAt(opAddr);
-		Object[] opObjects = instruction.getOpObjects(2);
+		if (instruction == null) {
+			// The decompiler can follow flow the listing has not disassembled; emit nothing.
+			return noOpPayload(context);
+		}
+		Object[] opObjects = getRangeRegisters(instruction, 2);
 		//String[] args = new String[opObjects.length + 1];
 
 		try {

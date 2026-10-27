@@ -49,37 +49,33 @@ import v8_bytecode.structs.TupleStruct;
 public final class ObjectsAllocator {
 	private MemoryBlock bcBlock; // bytecode
 	public static final long CODE_BASE = 0x10000000L;
-	private static final int CODE_MAX = 0x00100000;
 
 	private MemoryBlock bciBlock; // bytecode info
 	private static final long CODEI_BASE = 0x20000000L;
-	private static final int CODEI_MAX = 0x00100000;
 
 	private MemoryBlock arBlock; // arrays
 	private static final long ARRAY_BASE = 0x21000000L;
-	private static final int ARRAY_MAX = 0x00100000;
 
 	private MemoryBlock tpBlock; // tuples
 	private static final long TUPLS_BASE = 0x22000000L;
-	private static final int TUPLS_MAX = 0x00100000;
 	
 	private MemoryBlock cpBlock; // constant pools
 	private static final long CPOOLS_BASE = 0x23000000L;
-	private static final int CPOOLS_MAX = 0x00100000;
 
 	private MemoryBlock siBlock; // scope info
 	private static final long SCOPES_BASE = 0x24000000L;
-	private static final int SCOPES_MAX = 0x00100000;
 
 	private MemoryBlock sfBlock; // shared function
 	private static final long SFUNCS_BASE = 0x25000000L;
-	private static final int SFUNCS_MAX = 0x00100000;
 	
 	private MemoryBlock stBlock; // strings
 	private static final long STRINGS_BASE = 0x26000000L;
-	private static final int STRINGS_MAX = 0x00100000;
 	
 	public static final int kMetaMap = 0;
+
+	// Region bases are 16 MB apart; each region is sized from the input and trimmed in postAllocate().
+	private static final int MIN_REGION_SIZE = 0x00100000;
+	private static final int MAX_REGION_SIZE = 0x01000000;
 	
 	private TaskMonitor monitor;
 	private Memory mem;
@@ -98,7 +94,9 @@ public final class ObjectsAllocator {
 	private final SortedMap<Integer, SharedFunctionInfoStruct> createdSharedFuncs = new TreeMap<>();
 	private final Set<ReservObject> createdTuples = new HashSet<>();
 	
-	public ObjectsAllocator(final EnumsStorage enums, final EnumDataTypes enumsDt, Program program, TaskMonitor monitor) throws Exception {
+	public ObjectsAllocator(final EnumsStorage enums, final EnumDataTypes enumsDt, Program program, TaskMonitor monitor, long inputSize) throws Exception {
+		// No region can hold more than a small multiple of the serialized payload.
+		final int regionSize = (int) Math.min(MAX_REGION_SIZE, Math.max(MIN_REGION_SIZE, (inputSize * 4 + 0xFFFF) & ~0xFFFFL));
 		this.enums = enums;
 		this.enumsDt = enumsDt;
 		this.mem = program.getMemory();
@@ -112,7 +110,7 @@ public final class ObjectsAllocator {
 		
 		fpa = new FlatProgramAPI(program);
 		
-		byte[] fillBytes = new byte[CODE_MAX];
+		byte[] fillBytes = new byte[regionSize];
 		Arrays.fill(fillBytes, (byte) 0x95);
 		bcBlock = fpa.createMemoryBlock(".text", fpa.toAddr(CODE_BASE), fillBytes, false);
 		bcBlock.setExecute(true);
@@ -121,49 +119,49 @@ public final class ObjectsAllocator {
 		bcBlock.setVolatile(false);
 		allocsLast.put(bcBlock, new AllocationInfoLast(bcBlock));
 		
-		bciBlock = fpa.createMemoryBlock(".bcods", fpa.toAddr(CODEI_BASE), new byte[CODEI_MAX], false);
+		bciBlock = fpa.createMemoryBlock(".bcods", fpa.toAddr(CODEI_BASE), new byte[regionSize], false);
 		bciBlock.setExecute(false);
 		bciBlock.setRead(true);
 		bciBlock.setWrite(false);
 		bciBlock.setVolatile(false);
 		allocsNew.put(bciBlock, new AllocationInfoNew());
 		
-		arBlock = fpa.createMemoryBlock(".arrs", fpa.toAddr(ARRAY_BASE), new byte[ARRAY_MAX], false);
+		arBlock = fpa.createMemoryBlock(".arrs", fpa.toAddr(ARRAY_BASE), new byte[regionSize], false);
 		arBlock.setExecute(false);
 		arBlock.setRead(true);
 		arBlock.setWrite(false);
 		arBlock.setVolatile(false);
 		allocsNew.put(arBlock, new AllocationInfoNew());
 		
-		tpBlock = fpa.createMemoryBlock(".tupls", fpa.toAddr(TUPLS_BASE), new byte[TUPLS_MAX], false);
+		tpBlock = fpa.createMemoryBlock(".tupls", fpa.toAddr(TUPLS_BASE), new byte[regionSize], false);
 		tpBlock.setExecute(false);
 		tpBlock.setRead(true);
 		tpBlock.setWrite(false);
 		tpBlock.setVolatile(false);
 		allocsNew.put(tpBlock, new AllocationInfoNew());
 		
-		cpBlock = fpa.createMemoryBlock(".cpool", fpa.toAddr(CPOOLS_BASE), new byte[CPOOLS_MAX], false);
+		cpBlock = fpa.createMemoryBlock(".cpool", fpa.toAddr(CPOOLS_BASE), new byte[regionSize], false);
 		cpBlock.setExecute(false);
 		cpBlock.setRead(true);
 		cpBlock.setWrite(false);
 		cpBlock.setVolatile(false);
 		allocsNew.put(cpBlock, new AllocationInfoNew());
 		
-		siBlock = fpa.createMemoryBlock(".scope", fpa.toAddr(SCOPES_BASE), new byte[SCOPES_MAX], false);
+		siBlock = fpa.createMemoryBlock(".scope", fpa.toAddr(SCOPES_BASE), new byte[regionSize], false);
 		siBlock.setExecute(false);
 		siBlock.setRead(true);
 		siBlock.setWrite(true);
 		siBlock.setVolatile(false);
 		allocsNew.put(siBlock, new AllocationInfoNew());
 		
-		sfBlock = fpa.createMemoryBlock(".sfunc", fpa.toAddr(SFUNCS_BASE), new byte[SFUNCS_MAX], false);
+		sfBlock = fpa.createMemoryBlock(".sfunc", fpa.toAddr(SFUNCS_BASE), new byte[regionSize], false);
 		sfBlock.setExecute(false);
 		sfBlock.setRead(true);
 		sfBlock.setWrite(false);
 		sfBlock.setVolatile(false);
 		allocsNew.put(sfBlock, new AllocationInfoNew());
 		
-		stBlock = fpa.createMemoryBlock(".str", fpa.toAddr(STRINGS_BASE), new byte[STRINGS_MAX], false);
+		stBlock = fpa.createMemoryBlock(".str", fpa.toAddr(STRINGS_BASE), new byte[regionSize], false);
 		stBlock.setExecute(false);
 		stBlock.setRead(true);
 		stBlock.setWrite(false);
@@ -352,28 +350,11 @@ public final class ObjectsAllocator {
 		
 		int kPointerSize = getPointerSize();
 		
+		if (isStringType(type)) {
+			return convertString(obj);
+		}
+
 		switch (type) {
-		case "OneByteInternalizedString":
-		case "OneByteString": {
-			byte[] result = reservObjectToBytes(obj, 2, false);
-			return new String(result);
-		}
-		case "OneByteStringMap": { // New case
-			byte[] result = reservObjectToBytes(obj, 2, false);
-			return new String(result);
-		}
-		case "OneByteInternalizedStringMap": { // New case
-			byte[] result = reservObjectToBytes(obj, 2, false);
-			return new String(result, StandardCharsets.ISO_8859_1); // Use single-byte encoding
-		}
-		case "InternalizedString": {
-			byte[] result = reservObjectToBytes(obj, 2, true);
-			return new String(result, StandardCharsets.UTF_16LE);
-		}
-		case "InternalizedStringMap": { // New case
-			byte[] result = reservObjectToBytes(obj, 2, true);
-			return new String(result, StandardCharsets.UTF_16LE);
-		}
 		case "FixedCOWArray": {
 			int count = (int) (obj.getSize() - kPointerSize) / 4;
 			
@@ -396,12 +377,6 @@ public final class ObjectsAllocator {
 		}
 		case "SharedFunctionInfo": {
 			return new SharedFunctionInfoStruct(obj, this);
-		}
-		case "ConsOneByteString": {
-			return convertConsOneByteString(obj);
-		}
-		case "ConsOneByteStringMap": { // New case
-			return convertConsOneByteString(obj);
 		}
 		default: {
 			throw new Exception(type + " not implemented in ConvertReservObject");
@@ -443,29 +418,65 @@ public final class ObjectsAllocator {
 		return result;
 	}
 	
-	public String convertConsOneByteString(final Object obj) throws Exception {
+	/** Strips the "Map" suffix the v8_roots.json names carry, so both spellings are accepted. */
+	private static String baseTypeName(final String type) {
+		return type.endsWith("Map") ? type.substring(0, type.length() - 3) : type;
+	}
+
+	private static final Set<String> STRING_TYPES = Set.of(
+			"String", "OneByteString", "InternalizedString", "OneByteInternalizedString",
+			"ConsString", "ConsOneByteString", "ThinString", "ThinOneByteString",
+			"SlicedString", "SlicedOneByteString");
+
+	public static boolean isStringType(final String type) {
+		return STRING_TYPES.contains(baseTypeName(type));
+	}
+
+	/**
+	 * Converts any serialized V8 string object to a Java string. Layout (V8 6.5):
+	 * map, hash, length, then the characters (flat), first/second (cons),
+	 * actual (thin) or parent/offset (sliced).
+	 */
+	public String convertString(final Object obj) throws Exception {
 		if (obj == null) {
 			return "";
 		} else if (obj instanceof String) {
-			return (String)obj;
+			return (String) obj;
 		} else if (obj instanceof RootObject) {
-			return ((RootObject)obj).getName();
-		} else if (obj instanceof ReservObject) {
-			final RootObject typeObj = (RootObject) ((ReservObject)obj).getAlignedObject(kMetaMap);
-			final String type = typeObj.getName();
-			
-			int kPointerSize = getPointerSize();
-			
-			if (type.equals("OneByteInternalizedString") || type.equals("OneByteString") || type.equals("OneByteStringMap")) {
-				return (String) convertReservObject((ReservObject)obj);
-			} else if (type.equals("ConsOneByteString") || type.equals("ConsOneByteStringMap")) {
-				final ReservObject rObj = (ReservObject)obj;
-				String left = convertConsOneByteString(rObj.getAlignedObject(3 * kPointerSize)); // meta, hash, size
-				return left + convertConsOneByteString(rObj.getAlignedObject(4 * kPointerSize));
-			}
+			return ((RootObject) obj).getName();
+		} else if (!(obj instanceof ReservObject)) {
+			throw new Exception("Not a string object: " + obj.getClass().getName());
 		}
-		
-		return "";
+
+		final ReservObject rObj = (ReservObject) obj;
+		final String type = baseTypeName(((RootObject) rObj.getAlignedObject(kMetaMap)).getName());
+		final int kPointerSize = getPointerSize();
+
+		switch (type) {
+		case "OneByteString":
+		case "OneByteInternalizedString":
+			// One-byte strings are Latin-1, not the platform charset
+			return new String(reservObjectToBytes(rObj, 2, false), StandardCharsets.ISO_8859_1);
+		case "String":
+		case "InternalizedString":
+			return new String(reservObjectToBytes(rObj, 2, true), StandardCharsets.UTF_16LE);
+		case "ConsString":
+		case "ConsOneByteString":
+			return convertString(rObj.getAlignedObject(3 * kPointerSize))
+					+ convertString(rObj.getAlignedObject(4 * kPointerSize));
+		case "ThinString":
+		case "ThinOneByteString":
+			return convertString(rObj.getAlignedObject(3 * kPointerSize));
+		case "SlicedString":
+		case "SlicedOneByteString": {
+			final String parent = convertString(rObj.getAlignedObject(3 * kPointerSize));
+			final int offset = rObj.getSmiInt(4 * kPointerSize);
+			final int length = rObj.getSmiInt(2 * kPointerSize);
+			return parent.substring(offset, offset + length);
+		}
+		default:
+			throw new Exception(type + " is not a supported string type");
+		}
 	}
 	
 	public Object prepareForAlloc(final Object cpObj) throws Exception {
@@ -477,14 +488,11 @@ public final class ObjectsAllocator {
 			
 			int kPointerSize = getPointerSize();
 			
+			if (isStringType(rType.getName())) {
+				return convertString(rObj);
+			}
+
 			switch (rType.getName()) {
-			case "OneByteInternalizedString":
-			case "OneByteInternalizedStringMap": // New case
-			case "OneByteString":
-			case "InternalizedString":
-				return convertReservObject(rObj);
-			case "InternalizedStringMap":
-				return convertReservObject(rObj);
 			case "SharedFunctionInfo": {
 				SharedFunctionInfoStruct sf = SharedFunctionInfoStruct.getSharedFunctionInfo(this, SharedFunctionInfoStruct.getFunctionIndex(rObj, kPointerSize));
 				
@@ -529,6 +537,10 @@ public final class ObjectsAllocator {
 			case "FixedCOWArrayMap": {
 				return new ArrayStruct(rObj, this);
 			}
+			case "FixedDoubleArray":
+			case "FixedDoubleArrayMap": {
+				return new ArrayStruct(rObj, this, true);
+			}
 			case "Tuple2": {
 				return new TupleStruct(rObj, 2, this);
 			}
@@ -557,7 +569,7 @@ public final class ObjectsAllocator {
 			mem.setBytes(result, (byte[])data);
 			info.incLastAddress(((byte[])data).length);
 		} else if (data instanceof String) {
-			byte[] tmp = ((String)data).getBytes();
+			byte[] tmp = ((String)data).getBytes(StandardCharsets.UTF_8);
 			mem.setBytes(result, tmp);
 			info.incLastAddress(tmp.length);
 		} else if (data instanceof RootObject) {
